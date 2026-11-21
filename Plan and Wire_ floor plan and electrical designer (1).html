@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plan and Wire: floor plan and electrical designer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f4;--panel:#fff;--ink:#1b2a3a;--mute:#5d6b7a;--line:#cfd7df;--grid:#d9e0e7;--wall:#1b2a3a;--room:#2f6fb01a;--acc:#c8571b;--ok:#2b7a4b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1826;--panel:#14243a;--ink:#e3ebf5;--mute:#93a5ba;--line:#2a3f5b;--grid:#1c3150;--wall:#e3ebf5;--room:#5aa0ff1f;--acc:#ff8a4c;--ok:#5ccf8c}}
+:root[data-theme="dark"]{--bg:#0d1826;--panel:#14243a;--ink:#e3ebf5;--mute:#93a5ba;--line:#2a3f5b;--grid:#1c3150;--wall:#e3ebf5;--room:#5aa0ff1f;--acc:#ff8a4c;--ok:#5ccf8c}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 "IBM Plex Sans",system-ui,sans-serif}
+.app{display:grid;grid-template-columns:180px 1fr 340px;grid-template-rows:auto 1fr;height:100%;gap:8px;padding:8px}
+header{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:18px;margin:0;font-weight:600}
+.hint{color:var(--mute);font-size:12px;flex:1;min-width:200px}
+.tools,.side{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;overflow:auto}
+.tools h4,.side h3{margin:10px 0 4px;font-size:12px;color:var(--mute);font-weight:600}
+.tools h4:first-child{margin-top:0}
+button,select,input{font:inherit;color:var(--ink)}
+.tb{display:block;width:100%;text-align:left;margin:2px 0;padding:6px 8px;border:1px solid var(--line);background:transparent;border-radius:6px;cursor:pointer}
+.tb.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.tb:focus-visible,select:focus-visible,input:focus-visible,.btn:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.btn{padding:6px 10px;border:1px solid var(--line);background:var(--panel);border-radius:6px;cursor:pointer}
+.canvas{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:auto;min-height:0}
+#svg{display:block;width:100%;min-width:720px;touch-action:none;cursor:crosshair}
+#wbar{position:sticky;top:0;left:0;z-index:2;background:var(--panel);border-bottom:1px solid var(--line);padding:6px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}#wbar[hidden]{display:none}.tools details{margin:2px 0}.tools summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--mute);padding:4px 2px}#pdfpg{display:none}body.desktop header .btn,body.desktop header h1{display:none!important}.app.tmin{grid-template-columns:1fr 340px}.app.tmin .tools{display:none}@media(max-width:900px){.app.tmin{grid-template-columns:1fr;grid-template-rows:auto minmax(380px,1fr) auto}}
+@media screen{.app.smin{grid-template-columns:180px 1fr}.app.smin .side{display:none}.app.tmin.smin{grid-template-columns:1fr}}
+@media screen and (max-width:900px){.app.smin{grid-template-columns:1fr;grid-template-rows:auto auto minmax(380px,1fr)}.app.tmin.smin{grid-template-rows:auto minmax(380px,1fr)}}
+#prt{display:none}#ptitle{display:none;text-align:center;font-weight:600;font-size:18px;padding:6px;border-bottom:2px solid #000;color:#000}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:3px 4px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--mute);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+input,select{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:3px 5px;max-width:100%}
+input[type=number]{width:70px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.big{font-size:22px;font-weight:600}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0}
+@media(max-width:900px){.app{grid-template-columns:1fr;grid-template-rows:auto auto minmax(380px,1fr) auto;height:auto}header{grid-column:1}.tools{display:flex;flex-wrap:wrap;gap:4px}.tools h4{width:100%;margin:4px 0 0}.tb{width:auto}}
+@media print{html:root:root:root{--bg:#fff;--panel:#fff;--ink:#1b2a3a;--mute:#5d6b7a;--line:#cfd7df;--grid:#e3e8ee;--wall:#1b2a3a;--room:#2f6fb01a;--acc:#c8571b}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}.tools,header .btn,#wbar,#pbar{display:none!important}.app{display:block;height:auto}.canvas{overflow:visible;border:0}#svg{min-width:0}.side{overflow:visible;border:0;break-before:page}body{background:#fff}.app{padding:0;gap:0}.canvas{border-radius:0}#svg{width:100%;height:auto;min-width:0}.sec{break-inside:avoid}body[data-print=plan] .side,body[data-print=pdf] .side{display:none!important}body[data-print]:not([data-print=plan]):not([data-print=all]):not([data-print=pdf]) .canvas{display:none!important}body[data-print] .side>*:not(.sec){display:none!important}body[data-print=cost] .sec:not([data-s=cost]),body[data-print=circuits] .sec:not([data-s=circuits]),body[data-print=cable] .sec:not([data-s=cable]),body[data-print=materials] .sec:not([data-s=materials]),body[data-print=legend] .sec:not([data-s=legend]){display:none!important}.hint{display:none!important}.gridrect{display:none}body[data-print][data-pdf="0"] .pdfbg{display:none}.lgi:not(.used){display:none!important}.noprint{display:none!important}body[data-lic="0"] .app,body[data-lic="0"] #prt{display:none!important}body[data-lic="0"]::before{content:"Printing is a premium feature. Activate Premium in Plan and Wire to print.";display:block;font-size:18px;padding:20mm;text-align:center;color:#000}body[data-print=all] #pdfpg{display:block;border:2px solid #000;break-before:page;overflow:visible}#svg2{display:block;width:100%;height:auto;min-width:0}#pdfpg .pdfbg{display:block!important}#ptitle2{text-align:center;font-weight:600;font-size:18px;padding:6px;border-bottom:2px solid #000;color:#000}body[data-print] #prt{display:block;text-align:center;font-size:20px;font-weight:600;padding:2px 0 8px;color:#000}.canvas{border:2px solid #000!important}.sec{border:2px solid #000;padding:0 10px 10px;margin-bottom:8mm}.sec h3{margin:0 -10px 10px;padding:8px;font-size:18px;color:#000;text-align:center;border-bottom:2px solid #000}body[data-print=plan] #ptitle,body[data-print=all] #ptitle,body[data-print=pdf] #ptitle{display:block}}
+</style><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script></head><body>
+<div id="prt"></div><div class="app">
+<header><h1>Plan and Wire</h1><input id="ptt" placeholder="Project title" aria-label="Project title" style="min-width:170px"><button class="btn" id="sv">Save</button><button class="btn" id="sva">Save as...</button><label class="btn" style="cursor:pointer">Open file<input type="file" id="opf" accept=".json,application/json" hidden></label><span class="hint" id="hint"></span>
+<label class="btn" style="cursor:pointer">Import PDF<input type="file" id="pdfin" accept="application/pdf" hidden></label><button class="btn" id="tt" title="Minimise or maximise the tools panel">Hide tools</button><button class="btn" id="sp" title="Minimise or maximise the right panel">Hide panel</button><button class="btn" id="lic" onclick="premium()">Get Premium</button><button class="btn" onclick="newProject()">New project</button><button class="btn" id="undo">Undo</button><button class="btn" id="clear">Clear all</button><button class="btn" id="zi" title="Zoom in">Zoom +</button><button class="btn" id="zo" title="Zoom out">Zoom −</button><button class="btn" id="zf" title="Show whole plan">Fit</button><button class="btn" id="gt" title="Show or hide the grid and snapping">Grid: on</button><button class="btn" id="bk">Backup</button><select class="btn" id="pdf" title="Print or save as PDF"><option value="">Print / PDF...</option><option value="plan">Floor plan and wiring</option><option value="circuits">Circuits and power</option><option value="cable">Cable sizing per appliance</option><option value="materials">Material list</option><option value="cost">Cost estimate</option><option value="pdf">Imported PDF plan</option><option value="legend">Symbol legend</option><option value="all">Everything</option></select></header>
+<nav class="tools" id="tools" aria-label="Tools"></nav>
+<div class="canvas"><div id="wbar" hidden></div><div id="ptitle">Floor plan</div><svg id="svg" viewBox="0 0 1000 680" aria-label="Floor plan canvas"></svg></div>
+<aside class="side" id="side"></aside>
+</div>
+<script>
+const PX=40,W=1000,H=680,SN=10;
+const D={light:{n:"Light",w:12,s:"L"},socket:{n:"Socket outlet",w:200,s:"S"},switch:{n:"Switch",w:0,s:"SW"},fan:{n:"Ceiling fan",w:75,s:"F"},ac:{n:"Air conditioner",w:1500,s:"AC"},cooker:{n:"Cooker or heater",w:3000,s:"CK"},db:{n:"Distribution board",w:0,s:"DB"}};
+const TOOLS=[["Plan",[["select","Select / move"],["room","Room"],["wall","Wall (W)"],["dwall","Dotted wall"],["door","Door (D)"],["window","Window (N)"],["edoor","Empty door"],["ewin","Empty window"],["beam","Beam (B)"],["dim","Dimension"],["text","Text label"],["calib","Set PDF scale"]]],["Electrical",[["light","Light"],["socket","Socket"],["switch","Switch"],["fan","Fan"],["ac","Air conditioner"],["cooker","Cooker"],["db","Distribution board"],["wire","Wire circuit"]]]];
+const CC=["#d98e00","#2b7be0","#c8403a","#2b9a62","#8a4fd0","#00a3a3","#c44f9c","#6b7a2a"];
+const CN=["Lighting","Sockets A","Sockets B","Air conditioning","Cooker","Fans","Water heater","Shower"];
+let S={items:[],nid:1,tool:"select",circ:-1,sel:null,volt:240,df:0.8,extra:1,hist:[]};
+let tmp=null,drag=null,wfrom=null,pan=null,ws=null,wp=null,WD={dir:"0",ang:"45"},V={x:0,y:0,w:1000,h:680};
+function setV(){svg.setAttribute("viewBox",V.x+" "+V.y+" "+V.w+" "+V.h)}
+function clampV(){V.x=Math.max(0,Math.min(1000-V.w,V.x));V.y=Math.max(0,Math.min(680-V.h,V.y))}
+function zoom(f,cx,cy){if(cx===undefined){cx=V.x+V.w/2;cy=V.y+V.h/2}const nw=Math.max(2,Math.min(200000,V.w*f)),k=nw/V.w;V.x=cx-(cx-V.x)*k;V.y=cy-(cy-V.y)*k;V.w=nw;V.h=nw*0.68;setV()}
+try{const v=localStorage.getItem("planwire");if(v)S=Object.assign(S,JSON.parse(v));S.hist=[];S.circ=-1;if(S.cn)S.cn.forEach((n,k)=>{CN[k]=n})}catch(e){}
+const $=id=>document.getElementById(id),svg=$("svg");
+const sn=v=>S.ns?Math.round(v*10)/10:Math.round(v/SN)*SN;
+function save(){try{localStorage.setItem("planwire",JSON.stringify({...S,hist:[],cn:CN}))}catch(e){}}
+function snap(){S.hist.push(JSON.stringify(S.items));if(S.hist.length>50)S.hist.shift()}
+function get(id){return S.items.find(i=>i.id===id)}
+function pt(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());return{x:sn(q.x),y:sn(q.y)}}
+function add(o){o.id=S.nid++;S.items.push(o);return o}
+const isDev=i=>D[i.type];
+function wlen(w){const a=get(w.a),b=get(w.b);if(!a||!b)return 0;let d=Math.abs(a.x-b.x)+Math.abs(a.y-b.y);if(w.mo==="x")d=Math.abs(w.m-a.x)+Math.abs(b.y-a.y)+Math.abs(b.x-w.m);else if(w.mo==="y")d=Math.abs(w.m-a.y)+Math.abs(b.x-a.x)+Math.abs(b.y-w.m);return d/PX+S.extra}
+
+function render(np){
+ let g='<defs><pattern id="gp" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="var(--grid)" stroke-width="1"/><path d="M20 0V40M0 20H40" stroke="var(--grid)" stroke-width=".4"/></pattern><pattern id="hp" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="var(--panel)"/><line x1="0" y1="0" x2="0" y2="7" stroke="var(--wall)" stroke-width="1.1"/></pattern></defs>'+(S.ng?"":'<rect class="gridrect" x="-100000" y="-100000" width="200000" height="200000" fill="url(#gp)"/>')+bgS();
+ for(const i of [...S.items].sort((a,b)=>zo(a)-zo(b))){const s=S.sel===i.id,c=s?'var(--acc)':'var(--wall)';if(zo(i)>=2)g+=flushW();
+  if(i.type==="room"){g+=`<rect data-id="${i.id}" x="${i.x}" y="${i.y}" width="${i.w}" height="${i.h}" fill="var(--room)"/>${segDraw(roomSegs(i),i,c)}<text x="${i.x+i.w/2}" y="${i.y+i.h/2}" text-anchor="middle" fill="var(--ink)" font-size="13" pointer-events="none">${esc(i.name)}</text><text x="${i.x+i.w/2}" y="${i.y+i.h/2+16}" text-anchor="middle" fill="var(--mute)" font-size="11" pointer-events="none">${rA(i)} m²</text>`+(S.rd!==false?`<text x="${i.x+i.w/2}" y="${i.y-9}" text-anchor="middle" fill="var(--acc)" font-size="11" pointer-events="none">${rW(i)} m</text><text x="${i.x-10}" y="${i.y+i.h/2+4}" text-anchor="end" fill="var(--acc)" font-size="11" pointer-events="none">${rH(i)} m</text>`:'')}
+  else if(i.type==="beam")g+=beamS(i,s)+wallHandles(i,s,1);else if(i.type==="dim")g+=dimS(i,s);else if(i.type==="text")g+=`<text data-id="${i.id}" x="${i.x}" y="${i.y}" font-size="14" fill="${s?'var(--acc)':'var(--ink)'}" style="cursor:move">${esc(i.text)}</text>`;else if(i.type==="wall")g+=`${segDraw([{x1:i.x,y1:i.y,x2:i.x2,y2:i.y2}],i,c)}${wallHandles(i,s)}`;
+  else if(i.type==="door"||i.type==="window"){g+=opS(i,s);continue;const l=(i.len||(i.type==="door"?0.9:1.2))*PX,r=(i.rot||0)*90,f=i.type==="door"?'#b07a3a':'#4aa3df';g+=`<g data-id="${i.id}" transform="translate(${i.x} ${i.y}) rotate(${r})"><rect x="${-l/2}" y="-5" width="${l}" height="10" fill="${f}" stroke="${s?'var(--acc)':'var(--wall)'}" stroke-width="${s?3:1.5}"/>${i.type==="door"?`<path d="M${-l/2} 5 A${l} ${l} 0 0 0 ${l/2} ${l-5}" fill="none" stroke="${f}" stroke-dasharray="3 3"/>`:''}</g>`}
+ }
+ g+=flushW();for(const i of S.items)if(i.type==="wire"&&get(i.a)&&get(i.b)){const a=get(i.a),b=get(i.b),s=S.sel===i.id,d=wirePath(i);g+=`<path data-id="${i.id}" d="${d}" fill="none" stroke="${CC[wcOf(i)]}" stroke-width="${s?5:2.5}" stroke-dasharray="${s?'':'7 3'}"/><path data-id="${i.id}" d="${d}" fill="none" stroke="transparent" stroke-width="14"/>${s?wireHandles(i):""}`}
+ for(const i of S.items)if(isDev(i)){const s=S.sel===i.id,col=i.type==="db"?'var(--ink)':CC[i.c||0];
+  g+=symG(i,s,col)}
+ if(tmp){const a=tmp;g+=S.tool==="room"?`<rect x="${Math.min(a.x,a.x2)}" y="${Math.min(a.y,a.y2)}" width="${Math.abs(a.x2-a.x)}" height="${Math.abs(a.y2-a.y)}" fill="var(--room)" stroke="var(--acc)" stroke-opacity=".7" stroke-width="${tpx({})}"/>`:`<line x1="${a.x}" y1="${a.y}" x2="${a.x2}" y2="${a.y2}" stroke="var(--acc)" stroke-width="4" stroke-dasharray="6 4"/>`;
+  const L=S.tool==="room"?`${(Math.abs(a.x2-a.x)/PX).toFixed(2)} x ${(Math.abs(a.y2-a.y)/PX).toFixed(2)} m`:`${(Math.hypot(a.x2-a.x,a.y2-a.y)/PX).toFixed(2)} m`;g+=`<text x="${a.x2+10}" y="${a.y2-8}" font-size="12" fill="var(--acc)">${L}</text>`}
+ if(ws&&S.tool==="wall"){g+=`<circle cx="${ws.x}" cy="${ws.y}" r="6" fill="var(--acc)"/>`;if(wp)g+=`${wallPrev(ws,wp)}<text x="${wp.x+10}" y="${wp.y-8}" font-size="12" fill="var(--acc)">${(Math.hypot(wp.x-ws.x,wp.y-ws.y)/PX).toFixed(2)} m</text>`}
+ if(PA&&PA.a&&PA.b){const x1=Math.min(PA.a.x,PA.b.x),y1=Math.min(PA.a.y,PA.b.y),x2=Math.max(PA.a.x,PA.b.x),y2=Math.max(PA.a.y,PA.b.y);g+=`<path d="M-100000 -100000H100000V100000H-100000Z M${x1} ${y1}V${y2}H${x2}V${y1}Z" fill="rgba(0,0,0,.35)" fill-rule="evenodd" pointer-events="none"/><rect x="${x1}" y="${y1}" width="${x2-x1}" height="${y2-y1}" fill="none" stroke="var(--acc)" stroke-width="2" stroke-dasharray="8 4" pointer-events="none"/><text x="${x1+4}" y="${y1-6}" font-size="11" fill="var(--acc)">${((x2-x1)/PX).toFixed(1)} x ${((y2-y1)/PX).toFixed(1)} m</text>`}
+ if(cal&&S.tool==="calib"&&LP){const q=SNP||LP;g+=`<line x1="${cal.x}" y1="${cal.y}" x2="${q.x}" y2="${q.y}" stroke="var(--acc)" stroke-width="${1.5*V.w/1000}" stroke-dasharray="${6*V.w/1000} ${4*V.w/1000}"/><text x="${q.x+10*V.w/1000}" y="${q.y-10*V.w/1000}" font-size="${12*V.w/1000}" fill="var(--acc)">${(Math.hypot(q.x-cal.x,q.y-cal.y)/PX).toFixed(3)} m at the current scale</text>`}
+ if(SNP&&(S.tool==="wall"||S.tool==="room"||S.tool==="dim"||S.tool==="calib"))g+=`<circle cx="${SNP.x}" cy="${SNP.y}" r="7" fill="none" stroke="var(--acc)" stroke-width="2"/><circle cx="${SNP.x}" cy="${SNP.y}" r="2.2" fill="var(--acc)"/><text x="${SNP.x+10}" y="${SNP.y-10}" font-size="10" fill="var(--acc)">${SNP.k}</text>`;
+ if(cal)g+=`<circle cx="${cal.x}" cy="${cal.y}" r="6" fill="var(--acc)"/>`;
+ const pt0=$("ptt");if(pt0&&document.activeElement!==pt0)pt0.value=S.title||"";$("gt").textContent=S.ng?"Grid: off":"Grid: on";svg.innerHTML=g;if(!np)panels();save()}
+function dimS(i,s){const c=s?'var(--acc)':'#c0392b',dx=i.x2-i.x,dy=i.y2-i.y,L=Math.hypot(dx,dy),a=Math.atan2(dy,dx)*180/Math.PI,mx=(i.x+i.x2)/2,my=(i.y+i.y2)/2;
+ const tk=(x,y)=>`<line x1="${x-6}" y1="${y+6}" x2="${x+6}" y2="${y-6}" stroke="${c}" stroke-width="2" transform="rotate(${a} ${x} ${y})"/>`;
+ return `<g data-id="${i.id}" style="cursor:move"><line x1="${i.x}" y1="${i.y}" x2="${i.x2}" y2="${i.y2}" stroke="${c}" stroke-width="1.5"/><line x1="${i.x}" y1="${i.y}" x2="${i.x2}" y2="${i.y2}" stroke="transparent" stroke-width="14"/>${tk(i.x,i.y)}${tk(i.x2,i.y2)}<text transform="translate(${mx} ${my}) rotate(${a>90||a<-90?a+180:a})" text-anchor="middle" y="-5" font-size="12" fill="${c}">${(L/PX).toFixed(2)} m</text>${s?`<circle data-h="1" cx="${i.x}" cy="${i.y}" r="7" fill="var(--panel)" stroke="${c}" stroke-width="2" style="cursor:crosshair"/><circle data-h="2" cx="${i.x2}" cy="${i.y2}" r="7" fill="var(--panel)" stroke="${c}" stroke-width="2" style="cursor:crosshair"/>`:''}</g>`}
+function symK(t,c){if(SY[t])return SY[t](c);const b=`stroke="${c}" stroke-width="2" fill="none"`,p=`fill="var(--panel)" stroke="${c}" stroke-width="2"`;
+ if(t==="light")return `<circle r="11" ${p}/><path d="M-8-8L8 8M8-8L-8 8" ${b}/>`;
+ if(t==="socket")return `<path d="M-10 5A10 10 0 0 1 10 5Z" ${p}/><path d="M0 5V11" ${b}/>`;
+ if(t==="switch")return `<circle r="5" ${p}/><path d="M4-4L13-13M9.5-16.5L16.5-9.5" ${b}/>`;
+ if(t==="fan")return [0,90,180,270].map(r=>`<ellipse cy="-9" rx="3.5" ry="7" ${p} transform="rotate(${r})"/>`).join("")+`<circle r="3" fill="${c}"/>`;
+ if(t==="ac")return `<rect x="-17" y="-9" width="34" height="18" ${p}/><path d="M-13-3H13M-13 3H13" ${b}/>`;
+ if(t==="cooker")return `<rect x="-14" y="-14" width="28" height="28" ${p}/>`+[[-6,-6],[6,-6],[-6,6],[6,6]].map(q=>`<circle cx="${q[0]}" cy="${q[1]}" r="4" ${b}/>`).join("");
+ return `<rect x="-15" y="-11" width="30" height="22" ${p}/><path d="M-15 11L15-11V11Z" fill="${c}"/>`}
+function symG(i,s,col){const c=s?'var(--acc)':(i.type==="db"?'var(--ink)':col);return `<g data-id="${i.id}" style="cursor:move"><g transform="translate(${i.x} ${i.y}) rotate(${i.ang||0})"><circle r="18" fill="transparent"/>${symK(i.type,c)}${wfrom===i.id?'<circle r="23" fill="none" stroke="var(--acc)" stroke-dasharray="4 3"/>':''}</g><text x="${i.x}" y="${i.y+30}" text-anchor="middle" font-size="10" fill="var(--ink)" pointer-events="none">${esc(i.tag||"")}</text></g>`}
+const tpx=i=>Math.max(2,(i.t||S.wt||200)/1000*PX);
+function wcon(p){const dx=Math.abs(p.x-ws.x),dy=Math.abs(p.y-ws.y);if(SHIFT||dy<=8||dx<=8)return dx>=dy?{x:p.x,y:ws.y}:{x:ws.x,y:p.y};return{x:p.x,y:p.y}}
+function wend(){const el=$("wd");const d=el?parseFloat(el.value):NaN;if(!(d>0))return null;const a=(WD.dir==="c"?parseFloat(WD.ang)||0:+WD.dir)*Math.PI/180;return{x:Math.round((ws.x+Math.cos(a)*d*PX)*10)/10,y:Math.round((ws.y-Math.sin(a)*d*PX)*10)/10}}
+function wprev(){wp=wend();render(1)}
+function wmove(p){if(wend())return;wp=wcon(p);render(1)}
+function addWallOld(a,b){snap();const w=add({type:"wall",x:a.x,y:a.y,x2:b.x,y2:b.y,ds:S.wd?1:0});S.sel=w.id;ws={x:b.x,y:b.y};wp=null;render();wbarShow()}
+function wallClick(p){if(!ws){ws=p;wp=null;WL=null;render();wbarShow();return}const e=wcon(p);if(e.x!==ws.x||e.y!==ws.y)addWall(ws,e)}
+function addTyped(){const e=wend();if(!e)return;addWall(ws,e)}
+function wdone(){ws=null;wp=null;WL=null;wbarShow();render()}
+function wbarShow(){const b=$("wbar");if(S.tool!=="wall"||!ws){b.hidden=true;return}b.hidden=false;
+ b.innerHTML=`<b>Wall</b>${woSel()}<span>Direction</span><select id="wdir" onchange="WD.dir=this.value;$('wang').style.display=this.value==='c'?'':'none';wprev()">${[["0","Right"],["90","Up"],["180","Left"],["270","Down"],["c","Custom angle"]].map(o=>`<option value="${o[0]}" ${WD.dir===o[0]?'selected':''}>${o[1]}</option>`).join("")}</select><input id="wang" type="number" step="1" value="${WD.ang}" title="Angle in degrees: 0 is right, 90 is up" style="display:${WD.dir==="c"?'':'none'}" oninput="WD.ang=this.value;wprev()"><span>Distance (m)</span><input id="wd" type="number" min="0.1" step="0.05" placeholder="e.g. 3.5" oninput="wprev()" onkeydown="if(event.key==='Enter')addTyped()"><button class="btn" onclick="addTyped()">Add wall</button><button class="btn" onclick="wdone()">Done</button><span class="hint" id="wmsg">Type a distance and press Enter, or click the plan for the end point.</span>`;
+ setTimeout(()=>{const d=$("wd");if(d)d.focus()},0)}
+const MT={A:[14.5,19.5,26,34,46,61,80,99],B:[17.5,24,32,41,57,76,101,125],C:[19.5,27,36,46,63,85,112,138]},SZ=[1.5,2.5,4,6,10,16,25,35],MV=[29,18,11,7.3,4.4,2.8,1.75,1.25],CA={25:1.03,30:1,35:0.94,40:0.87,45:0.79,50:0.71},CG=[1,1,0.8,0.7,0.65,0.6,0.57,0.54,0.52,0.5];
+function cabFor(In,Ib,L,lim,mn){const tb=MT[S.im||"B"]||MT.B,ca=CA[S.ta||30]||1,cg=CG[Math.min(Math.max(S.cg||1,1),9)]||0.5;let r;for(let k=0;k<SZ.length;k++){if(SZ[k]<mn)continue;const iz=tb[k]*ca*cg;if(iz<In)continue;const vd=MV[k]*Ib*L/1000/S.volt*100;r={mm:SZ[k],vd,ok:vd<=lim,iz};if(r.ok)return r}return r||{mm:35,vd:0,ok:false,iz:0}}
+function dists(){const dm={};S.items.forEach(i=>{if(i.type==="db"||i.type==="cu")dm[i.id]=0});const W2=S.items.filter(i=>i.type==="wire"&&get(i.a)&&get(i.b));let ch=1,n=0;while(ch&&n++<60){ch=0;for(const w of W2){const l=wlen(w);for(const[u,v]of[[w.a,w.b],[w.b,w.a]]){if(dm[u]!==undefined&&(dm[v]===undefined||dm[u]+l<dm[v]-1e-9)){dm[v]=dm[u]+l;ch=1}}}}return dm}
+const MN0={light:1.5,socket:2.5,fan:2.5,ac:4,cooker:4};
+const mnf=t=>{const k=(D[t]&&D[t].mk)||t;return(S.mn&&S.mn[k])||MN0[k]||(D[t]&&D[t].m)||1.5};
+function setMn(t,v){S.mn=S.mn||{};S.mn[t]=+v;render()}
+function mnUI(){return '<div class="row"><b>Minimum cable size (mm²)</b></div><div class="row">'+Object.keys(MN0).map(t=>`<label>${D[t].n} <select onchange="setMn('${t}',this.value)">${[1.5,2.5,4,6,10,16].map(m=>`<option ${mnf(t)===m?'selected':''}>${m}</option>`).join("")}</select></label>`).join("")+'</div>'}
+let sV=null;
+function bbox(){let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;const A=(x,y)=>{x1=Math.min(x1,x);y1=Math.min(y1,y);x2=Math.max(x2,x);y2=Math.max(y2,y)};
+ for(const i of S.items){if(i.type==="wire")continue;if(i.type==="room"){A(i.x,i.y);A(i.x+i.w,i.y+i.h)}else if(i.x2!==undefined){A(i.x,i.y);A(i.x2,i.y2)}else A(i.x,i.y)}
+ if(x1>x2)return{cx:500,cy:340,w:1000,h:680};
+ const w=Math.max(x2-x1+120,300),h=Math.max(y2-y1+120,200);return{cx:(x1+x2)/2,cy:(y1+y2)/2,w,h}}
+function doPrint(part,reg,inc0){if(!gate("Print to PDF"))return;if(part==="pdf"&&!BG){$("hint").textContent="Import a PDF first.";return}S.sel=null;wfrom=null;ws=null;wp=null;wbarShow();sV={...V};let land=false;
+ if(part==="plan"||part==="all"||part==="pdf"){const b=reg?{cx:(reg.x1+reg.x2)/2,cy:(reg.y1+reg.y2)/2,w:Math.max(40,Math.abs(reg.x2-reg.x1)),h:Math.max(40,Math.abs(reg.y2-reg.y1))}:(part==="pdf"&&BG?{cx:BG.x+BG.w/2,cy:BG.y+BG.h/2,w:BG.w+40,h:BG.h+40}:bbox());land=b.w>=b.h;const R=land?1.75:0.8;let w=b.w,h=b.h;if(w/h<R)w=h*R;else h=w/R;V={x:b.cx-w/2,y:b.cy-h/2,w,h}}else V={x:0,y:0,w:1000,h:680};
+ svg.setAttribute("viewBox",V.x+" "+V.y+" "+V.w+" "+V.h);$("prt").textContent=S.title||"";$("ptitle").textContent=part==="pdf"?"Imported plan":"Floor plan";const inc=part==="pdf"||(!!BG&&inc0);if(inc&&BG){BG._op=BG.op;BG.op=1}document.body.dataset.pdf=inc?"1":"0";document.body.dataset.print=part;
+ let st=$("pg");if(!st){st=document.createElement("style");st.id="pg";document.head.appendChild(st)}
+ st.textContent="@page{size:"+(land?"landscape":"portrait")+";margin:8mm}";window.__pwLand=land;render();
+ if(part==="never"){const old=$("pdfpg");if(old)old.remove();const R2=land?1.75:0.8;let w=BG.w+40,h=BG.h+40;if(w/h<R2)w=h*R2;else h=w/R2;const c=document.createElement("div");c.id="pdfpg";c.className="canvas";const tt=document.createElement("div");tt.id="ptitle2";tt.textContent="Imported plan";const sv=svg.cloneNode(true);sv.id="svg2";sv.setAttribute("viewBox",(BG.x+BG.w/2-w/2)+" "+(BG.y+BG.h/2-h/2)+" "+w+" "+h);sv.querySelectorAll(".pdfbg").forEach(i=>i.setAttribute("opacity","1"));c.appendChild(tt);c.appendChild(sv);document.querySelector(".app").insertBefore(c,document.querySelector(".side"))}
+ setTimeout(()=>{try{window.print()}catch(e){alert("Press Ctrl+P (Cmd+P on Mac) and choose Save as PDF.")}},50)}
+const DEF={light:0,switch:0,socket:1,ac:3,cooker:4,fan:5,db:0};
+const cOf=t=>S.circ>=0?S.circ:(DEF[t]||0);
+function wireC(a,b){const l=[a,b].find(d=>D[d.type].g!=="dist"&&D[d.type].g!=="sw")||[a,b].find(d=>D[d.type].g!=="dist");return l?(l.c||0):0}
+function autoC(){snap();S.items.forEach(i=>{if(isDev(i)&&i.type!=="db")i.c=DEF[i.type]||0});S.items.forEach(w=>{if(w.type==="wire"){const a=get(w.a),b=get(w.b);if(a&&b)w.c=wireC(a,b)}});render()}
+const wcOf=w=>{const a=get(w.a),b=get(w.b);return a&&b?wireC(a,b):(w.c||0)};
+const zo=i=>i.type==="room"?0:i.type==="wall"?1:(i.type==="door"||i.type==="window")?2:3;
+function roomSegs(i){const r=[i.x,i.y,i.x+i.w,i.y+i.h];return[{x1:r[0],y1:r[1],x2:r[2],y2:r[1]},{x1:r[2],y1:r[1],x2:r[2],y2:r[3]},{x1:r[0],y1:r[3],x2:r[2],y2:r[3]},{x1:r[0],y1:r[1],x2:r[0],y2:r[3]}]}
+function segDrawOld(segs,it,c){const t=tpx(it),h=t/2,doors=S.items.filter(d=>d.type==="door");let o="";
+ const ln=(x1,y1,x2,y2,cap)=>`<line data-id="${it.id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${t}" stroke-linecap="${cap||'butt'}"/><line data-id="${it.id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="${Math.max(t,14)}"/>`;
+ for(const sg of segs){const hz=sg.y1===sg.y2,vt=sg.x1===sg.x2;if(!hz&&!vt){o+=ln(sg.x1,sg.y1,sg.x2,sg.y2,"square");continue}
+  const p1=hz?sg.x1:sg.y1,p2=hz?sg.x2:sg.y2,fx=hz?sg.y1:sg.x1,a=Math.min(p1,p2),b=Math.max(p1,p2),cuts=[];
+  for(const d of doors){const dl=(d.len||0.9)*PX/2,par=hz?d.x:d.y,perp=hz?d.y:d.x;if(Math.abs(perp-fx)<=15&&(((d.rot||0)%2===0)===hz))cuts.push([par-dl,par+dl])}
+  cuts.sort((m,n)=>m[0]-n[0]);let pos=a;const parts=[];
+  for(const k of cuts){if(k[1]<=pos||k[0]>=b)continue;if(k[0]>pos)parts.push([pos,k[0],pos===a,false]);pos=Math.max(pos,k[1])}
+  if(pos<b)parts.push([pos,b,pos===a,true]);
+  for(const q of parts){const s2=q[0]-(q[2]?h:0),e2=q[1]+(q[3]?h:0);if(q[1]-q[0]<=0)continue;o+=hz?ln(s2,fx,e2,fx):ln(fx,s2,fx,e2)}}
+ return o}
+function snapWall(i){let best=null,bd=16;const cand=[];
+ S.items.forEach(w=>{if(w.type==="wall")cand.push([w.x,w.y,w.x2,w.y2]);else if(w.type==="room"){const r=[w.x,w.y,w.x+w.w,w.y+w.h];cand.push([r[0],r[1],r[2],r[1]],[r[2],r[1],r[2],r[3]],[r[0],r[3],r[2],r[3]],[r[0],r[1],r[0],r[3]])}});
+ for(const q of cand){if(q[1]===q[3]){if(i.x>=Math.min(q[0],q[2])-10&&i.x<=Math.max(q[0],q[2])+10){const d=Math.abs(i.y-q[1]);if(d<bd){bd=d;best={h:1,v:q[1]}}}}else if(q[0]===q[2]){if(i.y>=Math.min(q[1],q[3])-10&&i.y<=Math.max(q[1],q[3])+10){const d=Math.abs(i.x-q[0]);if(d<bd){bd=d;best={h:0,v:q[0]}}}}}
+ if(!best)return false;const r=i.rot||0;
+ if(best.h){i.y=best.v;if(r%2)i.rot=r>=2?2:0}else{i.x=best.v;if(!(r%2))i.rot=r>=2?3:1}
+ return true}
+const T=[["light","Ceiling light (lamp)",12,"L","lt",0,null,1.5],["socket","Single socket",200,"S","sock",1,null,2.5],["switch","Switch 1-gang 1-way",0,"SW","sw",0,null,1.5],["fan","Ceiling fan",75,"F","app",5,null,2.5],["ac","Air conditioner",1500,"AC","app",3,null,4],["cooker","Cooker / oven",3000,"CK","app",4,null,4],["db","Distribution board",0,"DB","dist",0,null,1.5],
+["sw2","Switch 2-gang",0,"SW2","sw",0,null,1.5],["sw3","Switch 3-gang",0,"SW3","sw",0,null,1.5],["swtw","Switch 2-way 1-gang",0,"S2W","sw",0,null,1.5],["swint","Intermediate switch",0,"SI","sw",0,null,1.5],["dimmer","Dimmer switch",0,"DM","sw",0,null,1.5],["pull","Pull-cord switch",0,"PC","sw",0,null,1.5],["dp","Double-pole switch",0,"DP","sw",0,null,2.5],["timer","Timer switch",0,"TM","sw",0,null,1.5],["pir","PIR motion sensor",0,"PIR","sw",0,null,1.5],["bellp","Bell push",0,"BP","sw",0,null,1.5],["fcu","Fused spur unit (FCU)",0,"FCU","sw",1,null,2.5],["ccu","Cooker socket (CCU)",0,"CCU","sw",4,null,4],
+["sock2","Double socket",400,"S2","sock",1,"socket",2.5],["sockwp","Weatherproof socket (IP)",200,"WP","sock",1,"socket",2.5],["shaver","Shaver socket",100,"SS","sock",1,"socket",2.5],
+["fl1","Fluorescent lamp, single",36,"FL","lt",0,"light",1.5],["fl2","Fluorescent lamp, twin",72,"FL2","lt",0,"light",1.5],["panel","LED panel light",40,"LP","lt",0,"light",1.5],["spot","Downlight / spotlight",10,"DL","lt",0,"light",1.5],["wlight","Wall light",40,"WL","lt",0,"light",1.5],["emerg","Emergency light",6,"EM","lt",0,"light",1.5],["exit","Exit sign",5,"EX","lt",0,"light",1.5],["flood","Floodlight",150,"FD","lt",0,"light",1.5],
+["ext","Extractor fan",25,"XF","app",5,"fan",2.5],["heater","Water heater",3000,"WH","app",6,null,2.5],["shower","Electric shower",8500,"ES","app",7,null,6],["fridge","Refrigerator / freezer",150,"RF","app",2,null,2.5],["wm","Washing machine",2000,"WM","app",2,null,2.5],["appl","General appliance",500,"AP","app",2,null,2.5],
+["cu","Consumer control unit (CU)",0,"CU","dist",0,null,1.5],["meter","Energy meter",0,"KWH","dist",0,null,1.5],["iso","Main isolator",0,"MI","dist",0,null,1.5],["jb","Junction box",0,"JB","dist",0,null,1.5],["smoke","Smoke detector",0,"SD","dist",0,null,1.5],["earth","Earth point",0,"E","dist",0,null,1.5],["bell","Bell",0,"BL","dist",0,null,1.5],["tv","TV / aerial outlet",0,"TV","dist",1,null,1.5],["data","Data / telephone outlet",0,"DT","dist",1,null,1.5]];
+T.forEach(r=>{D[r[0]]={n:r[1],w:r[2],s:r[3],g:r[4],mk:r[6],m:r[7]};DEF[r[0]]=r[5]});
+const isLight=t=>{const g=D[t]&&D[t].g;return g==="lt"||g==="sw"||t==="fan"||t==="ext"};
+const isSock=t=>D[t]&&D[t].g==="sock";
+const GR=[["Switches and control","sw"],["Sockets and outlets","sock"],["Lighting","lt"],["Fans and appliances","app"],["Distribution and other","dist"],["Cooker","cook"],["Custom symbols","cus"]];
+function elecTools(){let h="<h4>Electrical</h4>";for(const[t,g]of GR){h+=`<details ${S.tool&&D[S.tool]&&D[S.tool].g===g?"open":""}><summary>${t}</summary>`+Object.keys(D).filter(k=>D[k].g===g).map(k=>`<button class="tb ${S.tool===k?"on":""}" data-t="${k}">${D[k].n}</button>`).join("")+"</details>"}return h+`<button class="tb ${S.tool==="wire"?"on":""}" data-t="wire">Wire circuit</button><button class="tb" onclick="symOpen()">+ Create symbol</button><button class="tb" onclick="autoRoute()">Auto-route cables (shortest)</button>`}
+const PB=c=>[`stroke="${c}" stroke-width="2" fill="none"`,`fill="var(--panel)" stroke="${c}" stroke-width="2"`];
+const W_=f=>c=>{const q=PB(c);return f(c,q[0],q[1])};
+const BX=(c,l,w,h)=>{const q=PB(c);return `<rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" ${q[1]}/><text y="3.5" text-anchor="middle" font-size="9" font-weight="600" fill="${c}">${l}</text>`};
+const SW=(c,n,ex)=>{const q=PB(c);let o=`<circle r="5" ${q[1]}/><path d="M4-4L13-13" ${q[0]}/>`;for(let k=0;k<n;k++){const u=13-3*k;o+=`<path d="M${u} ${-u}V${-u+5}" ${q[0]}/>`}return o+(ex||"")};
+const SY={
+ sw2:c=>SW(c,2),sw3:c=>SW(c,3),
+ swtw:c=>SW(c,0,`<path d="M-4 4L-13 13" ${PB(c)[0]}/>`),
+ swint:c=>SW(c,1,`<path d="M-4 4L-13 13M-16.5 9.5L-9.5 16.5" ${PB(c)[0]}/>`),
+ dimmer:c=>SW(c,0,`<path d="M13-13L9-18L18-9Z" fill="${c}"/>`),
+ pull:c=>SW(c,0,`<circle cx="14.5" cy="-14.5" r="3" ${PB(c)[1]}/>`),
+ dp:c=>SW(c,1,`<path d="M2-6L11-15" ${PB(c)[0]}/>`),
+ timer:W_((c,b,p)=>`<circle r="10" ${p}/><path d="M0 0V-6M0 0L5 3" ${b}/>`),
+ pir:W_((c,b)=>`<circle r="3" fill="${c}"/><path d="M-9-3A10 10 0 0 1 9-3M-13-6A15 15 0 0 1 13-6" ${b}/>`),
+ bellp:W_((c,b,p)=>`<circle r="9" ${p}/><circle r="3.5" fill="${c}"/>`),
+ fcu:c=>BX(c,"FCU",30,20),ccu:c=>BX(c,"CCU",30,20),
+ sock2:W_((c,b,p)=>`<path d="M-15 5A7.5 7.5 0 0 1 0 5ZM0 5A7.5 7.5 0 0 1 15 5Z" ${p}/><path d="M-7 5V11M7 5V11" ${b}/>`),
+ sockwp:W_((c,b,p)=>`<path d="M-10 6A10 10 0 0 1 10 6Z" ${p}/><path d="M0 6V12" ${b}/><path d="M0-15L-4-9H4Z" fill="${c}"/>`),
+ shaver:W_((c,b,p)=>`<path d="M-10 5A10 10 0 0 1 10 5Z" ${p}/><circle cy="0" r="3" ${b}/><path d="M0 5V11" ${b}/>`),
+ tv:c=>BX(c,"TV",26,16),data:c=>BX(c,"RJ",26,16),
+ fl1:W_((c,b,p)=>`<rect x="-17" y="-4" width="34" height="8" ${p}/><path d="M-17 0H17" ${b}/>`),
+ fl2:W_((c,b,p)=>`<rect x="-17" y="-7" width="34" height="14" ${p}/><path d="M-17-2H17M-17 2H17" ${b}/>`),
+ panel:W_((c,b,p)=>`<rect x="-13" y="-13" width="26" height="26" ${p}/><path d="M-13-13L13 13M13-13L-13 13" ${b}/>`),
+ spot:W_((c,b,p)=>`<circle r="9" ${p}/><path d="M-6-6L6 6M6-6L-6 6M-13-4A13 13 0 0 1-4-13" ${b}/>`),
+ wlight:W_((c,b,p)=>`<circle r="8" ${p}/><path d="M-5.5-5.5L5.5 5.5M5.5-5.5L-5.5 5.5M-13 12H13" ${b}/>`),
+ emerg:W_((c,b,p)=>`<circle r="10" ${p}/><path d="M-10 0A10 10 0 0 0 10 0Z" fill="${c}"/><path d="M-7-7L7 7M7-7L-7 7" ${b}/>`),
+ exit:W_((c,b,p)=>`<rect x="-16" y="-8" width="32" height="16" ${p}/><path d="M-10 0H10M6-4L10 0L6 4" ${b}/>`),
+ flood:W_((c,b,p)=>`<circle r="6" ${p}/><path d="M0-9V-15M0 9V15M-9 0H-15M9 0H15M-6.5-6.5L-11-11M6.5-6.5L11-11M-6.5 6.5L-11 11M6.5 6.5L11 11" ${b}/>`),
+ ext:W_((c,b,p)=>`<rect x="-13" y="-13" width="26" height="26" ${p}/><circle r="9" ${b}/><path d="M-9 0H9M0-9V9" ${b}/>`),
+ heater:W_((c,b,p)=>`<rect x="-12" y="-15" width="24" height="30" ${p}/><path d="M-8 0L-4-6L0 6L4-6L8 0" ${b}/>`),
+ shower:c=>BX(c,"ES",28,20),fridge:c=>BX(c,"RF",24,30),appl:c=>BX(c,"AP",30,20),
+ wm:W_((c,b,p)=>`<rect x="-13" y="-13" width="26" height="26" ${p}/><circle r="8" ${b}/>`),
+ cu:W_((c,b,p)=>`<rect x="-18" y="-12" width="36" height="24" ${p}/><rect x="-15" y="-9" width="8" height="18" fill="${c}"/><path d="M-2-9V9M5-9V9M12-9V9" ${b}/>`),
+ meter:W_((c,b,p)=>`<circle r="12" ${p}/><text y="3.5" text-anchor="middle" font-size="9" font-weight="600" fill="${c}">kWh</text>`),
+ iso:W_((c,b,p)=>`<rect x="-14" y="-9" width="28" height="18" ${p}/><path d="M-6 4L6-4" ${b}/><circle cx="-6" cy="4" r="2" fill="${c}"/>`),
+ jb:W_((c,b,p)=>`<rect x="-8" y="-8" width="16" height="16" ${p}/><path d="M-8-8L8 8M8-8L-8 8" ${b}/>`),
+ smoke:W_((c,b,p)=>`<circle r="10" ${p}/><text y="3.5" text-anchor="middle" font-size="9" font-weight="600" fill="${c}">SD</text>`),
+ earth:W_((c,b)=>`<path d="M0-10V0M-10 0H10M-6.5 4H6.5M-3 8H3" ${b}/>`),
+ bell:W_((c,b,p)=>`<path d="M-9 7Q-9-9 0-9Q9-9 9 7ZM-11 7H11" ${p}/><circle cy="11" r="2.5" fill="${c}"/>`)
+};
+let WC=[],WF=[],WH=[],DQ=[],BG=null,PDFP=null,cal=null;
+function flushW(){const o=WC.join("")+WF.join("")+dotOut()+WH.join("")+HD.join("");WC=[];WF=[];WH=[];DQ=[];SQ=[];HD=[];DRC=null;return o}
+function segDraw(segs,it,c){const t=tpx(it),h=t/2,ops=S.items.filter(d=>d.type==="door"||d.type==="window"),paint=({solid:"var(--wall)",empty:"var(--panel)",hatch:"url(#hp)",purple:"#d9c8f3"})[S.wf||"purple"]||"#d9c8f3";
+ const add=(a,b,x,fl)=>{if(it.ds&&fl){const hzr=a[1]===a[3];DQ.push({hz:hzr,x1:hzr?Math.min(a[0],a[2]):a[0]-h,x2:hzr?Math.max(a[0],a[2]):a[0]+h,y1:hzr?a[1]-h:Math.min(a[1],a[3]),y2:hzr?a[1]+h:Math.max(a[1],a[3]),s:fl[0],e:fl[1],c});WH.push(`<line data-id="${it.id}" x1="${a[0]}" y1="${a[1]}" x2="${a[2]}" y2="${a[3]}" stroke="transparent" stroke-width="${Math.max(t,14)}"/>`);return}if(!it.ds&&fl){const hzr=a[1]===a[3];SQ.push({x1:hzr?Math.min(a[0],a[2]):a[0]-h,x2:hzr?Math.max(a[0],a[2]):a[0]+h,y1:hzr?a[1]-h:Math.min(a[1],a[3]),y2:hzr?a[1]+h:Math.max(a[1],a[3])})}if(it.ds){const dx=a[2]-a[0],dy=a[3]-a[1],L=Math.hypot(dx,dy)||1,nx=-dy/L*h,ny=dx/L*h;for(const sg of[1,-1])WC.push(`<line x1="${a[0]+sg*nx}" y1="${a[1]+sg*ny}" x2="${a[2]+sg*nx}" y2="${a[3]+sg*ny}" stroke="${c}" stroke-width="1.4" stroke-dasharray="5 4"/>`);WH.push(`<line data-id="${it.id}" x1="${a[0]}" y1="${a[1]}" x2="${a[2]}" y2="${a[3]}" stroke="transparent" stroke-width="${Math.max(t,14)}"/>`);return}const q=`data-id="${it.id}" x1="${a[0]}" y1="${a[1]}" x2="${a[2]}" y2="${a[3]}"`,f=`x1="${b[0]}" y1="${b[1]}" x2="${b[2]}" y2="${b[3]}"`;WC.push(`<line ${q} stroke="${c}" stroke-width="${t}" stroke-linecap="${x||"butt"}"/>`);WF.push(`<line data-id="${it.id}" ${f} stroke="${paint}" stroke-width="${Math.max(1,t-2)}" stroke-linecap="${x||"butt"}"/>`);WH.push(`<line ${q} stroke="transparent" stroke-width="${Math.max(t,14)}"/>`)};
+ for(const sg of segs){const hz=sg.y1===sg.y2,vt=sg.x1===sg.x2;if(!hz&&!vt){const a=[sg.x1,sg.y1,sg.x2,sg.y2];add(a,a,"square");continue}
+  const p1=hz?sg.x1:sg.y1,p2=hz?sg.x2:sg.y2,fx=hz?sg.y1:sg.x1,a=Math.min(p1,p2),b=Math.max(p1,p2),cuts=[];
+  for(const d of ops){const dl=(d.len||(d.type==="door"?0.9:1.2))*PX/2,par=hz?d.x:d.y,perp=hz?d.y:d.x;if(Math.abs(perp-fx)<=15&&(((d.rot||0)%2===0)===hz))cuts.push([par-dl,par+dl])}
+  cuts.sort((m,n)=>m[0]-n[0]);let pos=a;const parts=[];
+  for(const k of cuts){if(k[1]<=pos||k[0]>=b)continue;if(k[0]>pos)parts.push([pos,k[0],pos===a,false]);pos=Math.max(pos,k[1])}
+  if(pos<b)parts.push([pos,b,pos===a,true]);
+  for(const q of parts){if(q[1]-q[0]<=0)continue;const jn=pp=>it.type==="room"||joined(hz?pp:fx,hz?fx:pp,it.id),s2=q[0]-(q[2]&&jn(q[0])?h:0),e2=q[1]+(q[3]&&jn(q[1])?h:0),s3=s2+(q[2]&&!inDot(hz?q[0]:fx,hz?fx:q[0])?1:0),e3=e2-(q[3]&&!inDot(hz?q[1]:fx,hz?fx:q[1])?1:0);const L=(s,e)=>hz?[s,fx,e,fx]:[fx,s,fx,e];add(L(s2,e2),L(s3,e3),null,[q[2],q[3]])}}
+ return ""}
+function wallT(i){let b=0,bd=16;S.items.forEach(w=>{const sg=w.type==="wall"?[[w.x,w.y,w.x2,w.y2]]:w.type==="room"?[[w.x,w.y,w.x+w.w,w.y],[w.x+w.w,w.y,w.x+w.w,w.y+w.h],[w.x,w.y+w.h,w.x+w.w,w.y+w.h],[w.x,w.y,w.x,w.y+w.h]]:[];sg.forEach(q=>{const d=q[1]===q[3]?Math.abs(i.y-q[1]):q[0]===q[2]?Math.abs(i.x-q[0]):99;if(d<bd){bd=d;b=tpx(w)}})});return b||tpx({})}
+function opS(i,s){const dw=i.type==="door",l=(i.len||(dw?0.9:1.2))*PX,t=Math.max(wallT(i),6),h=t/2,c=s?"var(--acc)":"#d62828",dt=i.dt||(dw?"single":"fixed");
+ const ln=(x1,y1,x2,y2,w,x)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w||1.4}" ${x||""}/>`;
+ let o=`<rect x="${-l/2}" y="${-h}" width="${l}" height="${t}" fill="var(--panel)" stroke="${dw?"none":c}" stroke-width="1.4"/>`+ln(-l/2,-h,-l/2,h)+ln(l/2,-h,l/2,h);
+ if(dw){if(dt==="slide")o+=`<rect x="${-l/2}" y="${-h/2-1}" width="${l*0.55}" height="3" fill="${c}"/><rect x="${l*0.45-l/2}" y="${h/2-2}" width="${l*0.55}" height="3" fill="${c}"/>`;
+  else if(dt==="double"){const r=l/2;o+=`<rect x="${-l/2}" y="0" width="2.5" height="${r}" fill="${c}"/><rect x="${l/2-2.5}" y="0" width="2.5" height="${r}" fill="${c}"/><path d="M0 0A${r} ${r} 0 0 1 ${-l/2} ${r}M0 0A${r} ${r} 0 0 0 ${l/2} ${r}" fill="none" stroke="${c}" stroke-width="1"/>`}
+  else if(dt!=="empty")o+=`<rect x="${-l/2}" y="0" width="2.5" height="${l}" fill="${c}"/><path d="M${l/2} 0A${l} ${l} 0 0 1 ${-l/2} ${l}" fill="none" stroke="${c}" stroke-width="1"/>`}
+ else{if(dt==="double")o+=ln(-l/2,-h/3,l/2,-h/3,1)+ln(-l/2,h/3,l/2,h/3,1);
+  else if(dt==="slide")o+=ln(-l/2,-h/3,l*0.1,-h/3,1.4)+ln(-l*0.1,h/3,l/2,h/3,1.4);
+  else{if(dt!=="empty")o+=ln(-l/2,0,l/2,0,1.2);if(dt==="casement")o+=`<path d="M0 0A${l/2} ${l/2} 0 0 1 ${-l/2} ${l/2}M0 0A${l/2} ${l/2} 0 0 0 ${l/2} ${l/2}" fill="none" stroke="${c}" stroke-width="1" stroke-dasharray="3 2"/>`}}
+ return `<g data-id="${i.id}" style="cursor:move" transform="translate(${i.x} ${i.y}) rotate(${(i.rot||0)*90}) scale(${i.fl?-1:1} 1)">${o}</g>`}
+function flipD(){const s=get(S.sel);if(s){snap();s.fl=s.fl?0:1;render()}}
+function bgS(){return BG?`<image class="pdfbg" href="${BG.src}" x="${BG.x}" y="${BG.y}" width="${BG.w}" height="${BG.h}" opacity="${BG.op}" preserveAspectRatio="none" pointer-events="none"/>`:""}
+async function loadPdf(file){if(!file)return;try{if(!window.pdfjsLib)await ensurePdfJs();if(!window.pdfjsLib){alert("The PDF reader could not load. Check your internet connection and try again.");return}
+ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+ await pdfWorkerSetup();const buf=await file.arrayBuffer(),bufc=buf.slice(0),doc=await pdfjsLib.getDocument({data:buf}).promise;let n=1;
+ if(doc.numPages>1){n=parseInt(prompt("This PDF has "+doc.numPages+" pages. Which page is the plan?","1"))||1;n=Math.min(Math.max(n,1),doc.numPages)}
+ const page=await doc.getPage(n),v1=page.getViewport({scale:1}),vs=page.getViewport({scale:Math.min(3,2600/Math.max(v1.width,v1.height))}),cv=document.createElement("canvas");
+ cv.width=vs.width;cv.height=vs.height;const cx=cv.getContext("2d");cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height);await page.render({canvasContext:cx,viewport:vs}).promise;
+ const k=Math.min(1000/v1.width,680/v1.height);BG={src:cv.toDataURL("image/png"),x:0,y:0,w:v1.width*k,h:v1.height*k,op:0.6,k};PDFP={page};render();
+ $("hint").textContent="PDF imported exactly as it is. Trace over it with the Wall, Door and Window tools; the pointer snaps to its lines.";try{const g=await pdfGeom();BG.geo=g.segs.filter(s=>Math.hypot(s[1][0]-s[0][0],s[1][1]-s[0][1])>=4).slice(0,8000).map(s=>[(s[0][0]-BG.x)/BG.w,(s[0][1]-BG.y)/BG.h,(s[1][0]-BG.x)/BG.w,(s[1][1]-BG.y)/BG.h])}catch(x){}try{S.pid=S.pid||("j"+Date.now().toString(36));BG.id="p"+Date.now().toString(36);BG.name=file.name;BG.pn=n;S.pdfId=BG.id;await bgSave(bufc)}catch(x){}refreshLib()}catch(e){alert("This PDF could not be opened. "+((e&&e.message)||""))}}
+async function pdfToWalls(){if(BG&&!PDFP)await restorePage();if(!PDFP||!BG)return;const O=pdfjsLib.OPS,page=PDFP.page,vp=page.getViewport({scale:1}),ol=await page.getOperatorList();
+ const mul=(m,c)=>[m[0]*c[0]+m[1]*c[2],m[0]*c[1]+m[1]*c[3],m[2]*c[0]+m[3]*c[2],m[2]*c[1]+m[3]*c[3],m[4]*c[0]+m[5]*c[2]+c[4],m[4]*c[1]+m[5]*c[3]+c[5]];
+ let ctm=[1,0,0,1,0,0];const st=[],segs=[],P=(x,y)=>{const X=ctm[0]*x+ctm[2]*y+ctm[4],Y=ctm[1]*x+ctm[3]*y+ctm[5],q=vp.convertToViewportPoint(X,Y);return[BG.x+q[0]*BG.k,BG.y+q[1]*BG.k]};
+ for(let n=0;n<ol.fnArray.length;n++){const f=ol.fnArray[n],a=ol.argsArray[n];
+  if(f===O.save)st.push(ctm);else if(f===O.restore){if(st.length)ctm=st.pop()}else if(f===O.transform)ctm=mul(a,ctm);
+  else if(f===O.constructPath){const ops=a[0],co=a[1];let ci=0,cur=null,start=null;
+   for(const op of ops){if(op===O.moveTo){cur=P(co[ci],co[ci+1]);start=cur;ci+=2}else if(op===O.lineTo){const q=P(co[ci],co[ci+1]);if(cur)segs.push([cur,q]);cur=q;ci+=2}
+    else if(op===O.rectangle){const x=co[ci],y=co[ci+1],w=co[ci+2],h=co[ci+3];ci+=4;const p1=P(x,y),p2=P(x+w,y),p3=P(x+w,y+h),p4=P(x,y+h);segs.push([p1,p2],[p2,p3],[p3,p4],[p4,p1])}
+    else if(op===O.curveTo){ci+=6;cur=null}else if(op===O.curveTo2||op===O.curveTo3){ci+=4;cur=null}else if(op===O.closePath){if(cur&&start)segs.push([cur,start]);cur=start}}}}
+ const seen=new Set();let n=0;snap();
+ for(const[p,q]of segs){const dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy);if(L<16||L>3000)continue;const hz=Math.abs(dy)<0.6,vt=Math.abs(dx)<0.6;if(!hz&&!vt)continue;
+  let x1=Math.round(p[0]),y1=Math.round(p[1]),x2=hz?Math.round(q[0]):x1,y2=hz?y1:Math.round(q[1]);
+  
+  const key=Math.min(x1,x2)+","+Math.min(y1,y2)+","+Math.max(x1,x2)+","+Math.max(y1,y2);if(seen.has(key))continue;seen.add(key);
+  S.items.push({id:S.nid++,type:"wall",x:x1,y:y1,x2,y2,t:S.wt||200});if(++n>=3000)break}
+ render();$("hint").textContent=n?n+" lines were added as editable walls. Select, move or delete them. Set Wall thickness per wall as needed.":"No straight lines were found in this PDF. It may be a scanned image, so trace over it instead."}
+function calClick(p){if(!BG){$("hint").textContent="Import a PDF first.";return}if(!cal){cal=p;render(1);return}const d=Math.hypot(p.x-cal.x,p.y-cal.y);if(d<5){cal=null;render(1);return}
+ const r=parseFloat(prompt("Real distance between the two points, in metres:","1"));if(r>0){const f=r*PX/d;BG.x=cal.x+(BG.x-cal.x)*f;BG.y=cal.y+(BG.y-cal.y)*f;BG.w*=f;BG.h*=f;BG.k*=f;BG.cal=1;if(BG.auto){scaleItems(f,cal.x,cal.y);BG.auto=0}bgSave()}cal=null;S.tool="select";tools();render()}
+$("pdfin").onchange=e=>{loadPdf(e.target.files[0]);e.target.value=""};
+const MOT=new Set(["ac","fan","ext","fridge","wm"]);
+const pfOf=t=>({ac:0.85,fan:0.85,ext:0.85,fridge:0.8,wm:0.85,fl1:0.9,fl2:0.9})[t]||1;
+const mainBr=t=>[32,40,63,80,100,125].find(x=>x>=t)||125;
+function setP(g,k,v){S.pr=S.pr||{};S.pr[g]=S.pr[g]||{};S.pr[g][k]=parseFloat(v)||0;render()}
+function costHtmlOld(st,ta){const P=S.pr||{},pd=P.d||{},pc=P.c||{},pb=P.b||{},cur=S.cur||"KES",f=n=>n.toLocaleString(undefined,{maximumFractionDigits:2});let tot=0;
+ const R=(g,k,nm,q,qs,u)=>{tot+=q*u;return `<tr><td>${nm}</td><td class="n">${qs}</td><td class="n"><input type="number" min="0" step="any" value="${u||""}" onchange="setP('${g}','${k}',this.value)"></td><td class="n">${f(q*u)}</td></tr>`};
+ let h=`</div><div class="sec" data-s="cost"><h3>Cost estimate</h3><div class="row">Currency <input style="width:80px" value="${esc(cur)}" onchange="S.cur=this.value||'KES';render()"></div><table><tr><th>Item</th><th class="n">Qty</th><th class="n">Unit cost</th><th class="n">Total</th></tr>`;
+ for(const k in D)if(st.cnt[k])h+=R("d",k,D[k].n,st.cnt[k],st.cnt[k],pd[k]||0);
+ const lb={};st.cl.forEach(c=>{if(c.len)lb[c.cab.mm]=(lb[c.cab.mm]||0)+c.len*1.1});let tl=0;
+ for(const mm of Object.keys(lb).map(Number).sort((a,b)=>a-b)){tl+=lb[mm];h+=R("c",mm,`Cable ${mm} mm\u00b2 (per m, +10% waste)`,lb[mm],lb[mm].toFixed(1)+" m",pc[mm]||0)}
+ if(tl)h+=R("c","cond","Conduit (per m, estimate)",tl*0.5,(tl*0.5).toFixed(1)+" m",pc.cond||0);
+ const bc={};let sk=0;st.cl.forEach(c=>{if(c.n||c.len){bc[c.In]=(bc[c.In]||0)+1;if(c.sk)sk=1}});
+ for(const r of Object.keys(bc).map(Number).sort((a,b)=>a-b))h+=R("b",r,`MCB ${r} A`,bc[r],bc[r],pb[r]||0);
+ if(Object.keys(bc).length){const m=mainBr(ta);h+=R("b","M"+m,`Main switch / breaker ${m} A`,1,1,pb["M"+m]||0)}
+ if(sk)h+=R("b","RCD","RCD 30 mA (sockets and wet areas)",1,1,pb.RCD||0);
+ const pm=P.m||{},nj=Math.ceil((st.cnt.light||0)/2),bm=S.items.filter(i=>i.type==="beam").reduce((s,b)=>s+Math.hypot(b.x2-b.x,b.y2-b.y)/PX,0);
+ if(nj)h+=R("m","jb","Junction boxes (estimate)",nj,nj,pm.jb||0);if(st.doors)h+=R("m","door","Doors",st.doors,st.doors,pm.door||0);if(st.wins)h+=R("m","window","Windows",st.wins,st.wins,pm.window||0);
+ if(st.walls)h+=R("m","wall","Walls (per m of length)",st.walls,st.walls.toFixed(1)+" m",pm.wall||0);if(bm>0.01)h+=R("m","beam","Beams (per m)",bm,bm.toFixed(1)+" m",pm.beam||0);if(st.area)h+=R("m","area","Floor area (per m\u00b2)",st.area,st.area.toFixed(1)+" m\u00b2",pm.area||0);
+ return h+`<tr><td><b>Total</b></td><td></td><td></td><td class="n"><b>${f(tot)} ${esc(cur)}</b></td></tr></table>`}
+function autoRoute(){const dbs=S.items.filter(i=>i.type==="db"||i.type==="cu");if(!dbs.length){$("hint").textContent="Place a distribution board or consumer unit first, then auto-route.";return}
+ const old=S.items.filter(i=>i.type==="wire").reduce((s,w)=>s+wlen(w),0);snap();S.items=S.items.filter(i=>i.type!=="wire");
+ const man=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.y-b.y);let tot=0,n=0;const addW=(a,b,k)=>{S.items.push({id:S.nid++,type:"wire",a:a.id,b:b.id,c:k});tot+=man(a,b)/PX+S.extra;n++};
+ for(let k=0;k<8;k++){const dev=S.items.filter(i=>isDev(i)&&D[i.type].g!=="dist"&&(i.c||0)===k);if(!dev.length)continue;
+  const loads=dev.filter(d=>D[d.type].g!=="sw"),sws=dev.filter(d=>D[d.type].g==="sw"),cx=dev.reduce((s,d)=>s+d.x,0)/dev.length,cy=dev.reduce((s,d)=>s+d.y,0)/dev.length;
+  const db=dbs.reduce((b,d)=>(!b||Math.abs(d.x-cx)+Math.abs(d.y-cy)<Math.abs(b.x-cx)+Math.abs(b.y-cy))?d:b,null);
+  const T=[db,...(loads.length?loads:sws)],used=[true],best=T.map(t=>man(db,t)),par=T.map(()=>0);
+  for(let it=1;it<T.length;it++){let m=-1;for(let j=1;j<T.length;j++)if(!used[j]&&(m<0||best[j]<best[m]))m=j;used[m]=true;addW(T[par[m]],T[m],k);for(let j=1;j<T.length;j++)if(!used[j]&&man(T[m],T[j])<best[j]){best[j]=man(T[m],T[j]);par[j]=m}}
+  if(loads.length)sws.forEach(s=>{const nr=loads.reduce((b,l)=>man(s,l)<man(s,b)?l:b,loads[0]);addW(s,nr,k)})}
+ S.tool="select";render();tools();$("hint").textContent="Auto-routed "+n+" cable runs, "+tot.toFixed(1)+" m in total (before: "+old.toFixed(1)+" m). Each circuit uses the shortest tree from its board."}
+async function pdfGeom(){const O=pdfjsLib.OPS,page=PDFP.page,vp=page.getViewport({scale:1}),ol=await page.getOperatorList();
+ const mul=(m,c)=>[m[0]*c[0]+m[1]*c[2],m[0]*c[1]+m[1]*c[3],m[2]*c[0]+m[3]*c[2],m[2]*c[1]+m[3]*c[3],m[4]*c[0]+m[5]*c[2]+c[4],m[4]*c[1]+m[5]*c[3]+c[5]];
+ let ctm=[1,0,0,1,0,0];const st=[],segs=[],arcs=[],P=(x,y)=>{const X=ctm[0]*x+ctm[2]*y+ctm[4],Y=ctm[1]*x+ctm[3]*y+ctm[5],q=vp.convertToViewportPoint(X,Y);return[BG.x+q[0]*BG.k,BG.y+q[1]*BG.k]};
+ for(let n=0;n<ol.fnArray.length;n++){const f=ol.fnArray[n],a=ol.argsArray[n];
+  if(f===O.save)st.push(ctm);else if(f===O.restore){if(st.length)ctm=st.pop()}else if(f===O.transform)ctm=mul(a,ctm);
+  else if(f===O.constructPath){const ops=a[0],co=a[1];let ci=0,cur=null,start=null;
+   for(const op of ops){if(op===O.moveTo){cur=P(co[ci],co[ci+1]);start=cur;ci+=2}else if(op===O.lineTo){const q=P(co[ci],co[ci+1]);if(cur)segs.push([cur,q]);cur=q;ci+=2}
+    else if(op===O.rectangle){const x=co[ci],y=co[ci+1],w=co[ci+2],h=co[ci+3];ci+=4;const p1=P(x,y),p2=P(x+w,y),p3=P(x+w,y+h),p4=P(x,y+h);segs.push([p1,p2],[p2,p3],[p3,p4],[p4,p1])}
+    else if(op===O.curveTo){const e=P(co[ci+4],co[ci+5]);arcs.push(e);cur=e;ci+=6}else if(op===O.curveTo2||op===O.curveTo3){const e=P(co[ci+2],co[ci+3]);arcs.push(e);cur=e;ci+=4}else if(op===O.closePath){if(cur&&start)segs.push([cur,start]);cur=start}}}}
+ return{segs,arcs}}
+async function pdfDetect(auto){if(BG&&!PDFP)await restorePage();if(!PDFP||!BG)return;let g=await pdfGeom();if(!BG.cal){const pk=peakGap(g);if(!pk){$("hint").textContent="Click Set scale first so the walls can be recognised.";return}
+  const mm=auto?200:parseFloat(prompt("The scale is not set. What is the thickness of the main walls in this drawing, in mm? For example 200 or 230. Cancel to use Set scale instead.","200"));if(!(mm>0))return;if(auto)BG.auto=1;
+  const f=mm*(PX/1000)/pk;BG.x*=f;BG.y*=f;BG.w*=f;BG.h*=f;BG.k*=f;BG.cal=1;g=await pdfGeom()}
+ const U=PX/1000,tmin=60*U,tmax=500*U,ov=0.5*PX,H=[],V=[];
+ for(const[p,q]of g.segs){const dx=q[0]-p[0],dy=q[1]-p[1];if(Math.hypot(dx,dy)<8)continue;if(Math.abs(dy)<0.6)H.push({k:(p[1]+q[1])/2,a:Math.min(p[0],q[0]),b:Math.max(p[0],q[0])});else if(Math.abs(dx)<0.6)V.push({k:(p[0]+q[0])/2,a:Math.min(p[1],q[1]),b:Math.max(p[1],q[1])})}
+ const merge=L=>{L.sort((u,v)=>u.k-v.k||u.a-v.a);const o=[];for(const s of L){const l=o[o.length-1];if(l&&Math.abs(l.k-s.k)<0.8&&s.a<=l.b+1.5)l.b=Math.max(l.b,s.b);else o.push({...s})}return o};
+ const spans=L=>{L=merge(L);const o=[];for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const d=L[j].k-L[i].k;if(d>tmax)break;if(d<tmin)continue;const a=Math.max(L[i].a,L[j].a),b=Math.min(L[i].b,L[j].b);if(b-a>=ov)o.push({c:(L[i].k+L[j].k)/2,t:d,a,b})}return o};
+ const build=(Sp,hz)=>{const grp={};Sp.forEach(s=>{const key=Math.round(s.c/2)+"_"+Math.round(s.t/2);(grp[key]=grp[key]||[]).push(s)});const res=[];
+  for(const key in grp){const L=grp[key].sort((u,v)=>u.a-v.a);let cur=null;for(const s of L){if(cur&&s.a-cur.b<=3*PX){if(s.a-cur.b>=0.5*PX)cur.gaps.push([cur.b,s.a]);cur.b=Math.max(cur.b,s.b)}else{if(cur)res.push(cur);cur={c:s.c,t:s.t,a:s.a,b:s.b,gaps:[],hz}}}if(cur)res.push(cur)}return res};
+ const FR=await pdfRects(),fh=[],fv=[];for(const r of FR){const w=r[2]-r[0],h=r[3]-r[1];if(w>=h&&h>=tmin&&h<=tmax&&w>=0.4*PX)fh.push({c:(r[1]+r[3])/2,t:h,a:r[0],b:r[2]});else if(h>w&&w>=tmin&&w<=tmax&&h>=0.4*PX)fv.push({c:(r[0]+r[2])/2,t:w,a:r[1],b:r[3]})}
+ const walls=[...build([...spans(H),...fh],true),...build([...spans(V),...fv],false)].filter(w=>w.b-w.a>=0.4*PX);
+ if(!walls.length){$("hint").textContent="No double-line walls were found. Try Convert all lines to walls, or trace over the PDF.";return}
+ snap();let nw=0,nd=0,nn=0;const R1=v=>Math.round(v*10)/10;
+ for(const w of walls){const t=Math.round(w.t/U);S.items.push({id:S.nid++,type:"wall",x:R1(w.hz?w.a:w.c),y:R1(w.hz?w.c:w.a),x2:R1(w.hz?w.b:w.c),y2:R1(w.hz?w.c:w.b),t});nw++;
+  for(const gp of w.gaps){const mid=(gp[0]+gp[1])/2,len=gp[1]-gp[0],cx=w.hz?mid:w.c,cy=w.hz?w.c:mid,sw=g.arcs.some(a=>Math.hypot(a[0]-cx,a[1]-cy)<len*0.9),
+   lines=(w.hz?H:V).filter(s=>Math.abs(s.k-w.c)<w.t/2+1&&s.a<=gp[0]+len*0.35&&s.b>=gp[1]-len*0.35).length,isW=!sw&&(lines>=1||len>1.25*PX);
+   S.items.push({id:S.nid++,type:isW?"window":"door",x:R1(cx),y:R1(cy),rot:w.hz?0:1,len:Math.round(len/PX*20)/20,dt:isW?"fixed":"single"});if(isW)nn++;else nd++}}
+ render();$("hint").textContent="Detected "+nw+" walls, "+nd+" doors and "+nn+" windows. All are editable. Check them against the PDF."+(BG.auto?" The scale was assumed from a 200 mm wall. Use Set scale to correct it and the plan will resize with it.":"")}
+$("gt").onclick=()=>{const off=!S.ng;S.ng=off;S.ns=off;render()};
+function dotOut(){if(!DQ.length)return"";const G={},sub=(P,a,b)=>{const o=[];for(const p of P){if(b<=p[0]||a>=p[1]){o.push(p);continue}if(a>p[0])o.push([p[0],a]);if(b<p[1])o.push([b,p[1]])}return o};
+ DQ.forEach((r,i)=>{let es;if(r.hz){es=[["h",r.y1,r.x1,r.x2],["h",r.y2,r.x1,r.x2]];if(r.s)es.push(["v",r.x1,r.y1,r.y2]);if(r.e)es.push(["v",r.x2,r.y1,r.y2])}else{es=[["v",r.x1,r.y1,r.y2],["v",r.x2,r.y1,r.y2]];if(r.s)es.push(["h",r.y1,r.x1,r.x2]);if(r.e)es.push(["h",r.y2,r.x1,r.x2])}
+  for(const[kind,k,u1,u2]of es){let P=[[u1,u2]];DQ.forEach((R,j)=>{if(j===i)return;if(kind==="h"){if(k>R.y1+0.5&&k<R.y2-0.5)P=sub(P,R.x1,R.x2);else if(j<i&&(Math.abs(k-R.y1)<0.5||Math.abs(k-R.y2)<0.5))P=sub(P,R.x1,R.x2)}else{if(k>R.x1+0.5&&k<R.x2-0.5)P=sub(P,R.y1,R.y2);else if(j<i&&(Math.abs(k-R.x1)<0.5||Math.abs(k-R.x2)<0.5))P=sub(P,R.y1,R.y2)}});
+   SQ.forEach(R=>{if(kind==="h"){if(k>R.y1+0.5&&k<R.y2-0.5)P=sub(P,R.x1,R.x2)}else{if(k>R.x1+0.5&&k<R.x2-0.5)P=sub(P,R.y1,R.y2)}});const key=kind+Math.round(k*2)/2+r.c;P.forEach(p=>{if(p[1]-p[0]>0.5)(G[key]=G[key]||{kind,k,c:r.c,L:[]}).L.push(p)})}});
+ const out=[];for(const key in G){const g=G[key];g.L.sort((a,b)=>a[0]-b[0]);const M=[];for(const p of g.L){const l=M[M.length-1];if(l&&p[0]<=l[1]+0.6)l[1]=Math.max(l[1],p[1]);else M.push([p[0],p[1]])}
+  for(const m of M)out.push(g.kind==="h"?`<line x1="${m[0]}" y1="${g.k}" x2="${m[1]}" y2="${g.k}" stroke="${g.c}" stroke-width="1.4" stroke-dasharray="5 4"/>`:`<line x1="${g.k}" y1="${m[0]}" x2="${g.k}" y2="${m[1]}" stroke="${g.c}" stroke-width="1.4" stroke-dasharray="5 4"/>`)}
+ return out.join("")}
+function wallPrev(a,b){const t=tpx({}),h=t/2;const o0=S.wo||0;if(o0&&(a.x!==b.x||a.y!==b.y)){const L0=Math.hypot(b.x-a.x,b.y-a.y),sx=(b.y-a.y)/L0*h*o0,sy=-(b.x-a.x)/L0*h*o0;a={x:a.x+sx,y:a.y+sy};b={x:b.x+sx,y:b.y+sy}}if(S.wd||S.bm){const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*h,ny=dx/L*h;return[1,-1].map(s=>`<line x1="${a.x+s*nx}" y1="${a.y+s*ny}" x2="${b.x+s*nx}" y2="${b.y+s*ny}" stroke="var(--acc)" stroke-width="1.6" stroke-dasharray="5 4"/>`).join("")}
+ const paint=({solid:"var(--wall)",empty:"var(--panel)",hatch:"url(#hp)",purple:"#d9c8f3"})[S.wf||"purple"]||"#d9c8f3";
+ return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--acc)" stroke-width="${t}" stroke-linecap="square" opacity=".9"/><line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${paint}" stroke-width="${Math.max(1,t-2)}" stroke-linecap="square" opacity=".9"/>`}
+function peakGap(g){const H=[],V=[];for(const[p,q]of g.segs){if(Math.hypot(q[0]-p[0],q[1]-p[1])<12)continue;if(Math.abs(q[1]-p[1])<0.6)H.push([(p[1]+q[1])/2,Math.min(p[0],q[0]),Math.max(p[0],q[0])]);else if(Math.abs(q[0]-p[0])<0.6)V.push([(p[0]+q[0])/2,Math.min(p[1],q[1]),Math.max(p[1],q[1])])}
+ const hist={};for(const L of[H,V]){L.sort((a,b)=>a[0]-b[0]);for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const d=L[j][0]-L[i][0];if(d>40)break;if(d<1.2)continue;if(Math.min(L[i][2],L[j][2])-Math.max(L[i][1],L[j][1])<15)continue;const k=Math.round(d*2)/2;hist[k]=(hist[k]||0)+1}}
+ let b=0,bk=0;for(const k in hist)if(hist[k]>b){b=hist[k];bk=+k}return b>=3?bk:0}
+function projKeys(){try{return Object.keys(localStorage).filter(k=>k.startsWith("pw:")).map(k=>k.slice(3)).sort()}catch(e){return[]}}
+const enc=k=>encodeURIComponent(k).replace(/'/g,"%27");
+function projHtml(){const ks=projKeys();return '<h3>Project</h3><div class="row"><b>'+esc(S.title||"Untitled project")+'</b></div>'+(ks.length?'<table>'+ks.map(k=>`<tr><td>${esc(k)}</td><td class="n"><button class="btn" onclick="loadProj(decodeURIComponent('${enc(k)}'))">Open</button> <button class="btn" onclick="delProj(decodeURIComponent('${enc(k)}'))">Delete</button></td></tr>`).join("")+'</table>':'<div class="hint">No saved projects yet. Use Save as.</div>')}
+function saveProj(name){try{S.title=name;localStorage.setItem("pw:"+name,JSON.stringify({...S,hist:[]}));render();$("hint").textContent="Saved project: "+name}catch(e){alert("Could not save. Browser storage may be full or blocked.")}}
+function loadProj(n){if(!gate("Open project"))return;try{const d=JSON.parse(localStorage.getItem("pw:"+n));if(!d)return;if(S.items.length&&!confirm("Open "+n+"? Unsaved changes to the current plan will be lost."))return;
+ S=Object.assign({items:[],nid:1,tool:"select",circ:-1,sel:null,volt:240,df:0.8,extra:1,hist:[]},d,{hist:[],sel:null,circ:-1,tool:"select"});if(S.cn)S.cn.forEach((m,k)=>{CN[k]=m});ws=null;wp=null;wfrom=null;regCS();mergeCS(S.cs);delete S.cs;BG=null;PDFP=null;if(!S.pid)S.pid="j"+Date.now().toString(36);restoreBG();refreshLib();tools();render()}catch(e){alert("That project could not be opened.")}}
+function delProj(n){if(confirm("Delete saved project "+n+"?")){try{localStorage.removeItem("pw:"+n)}catch(e){}render()}}
+$("ptt").oninput=e=>{S.title=e.target.value;save()};
+$("sv").onclick=()=>{const n=(S.title||"").trim();if(n)saveProj(n);else{const m=prompt("Project title:","Untitled project");if(m&&m.trim())saveProj(m.trim())}};
+$("sva").onclick=()=>{const m=prompt("Save project as:",S.title||"Untitled project");if(m&&m.trim())saveProj(m.trim())};
+let SNP=null,WL=null;
+function snapPt0(p){let best=null,bd=12*(V.w/1000);const A=(x,y,k,d)=>{if(d<bd){bd=d;best={x,y,k}}},walls=[];
+ S.items.forEach(w=>{if(w.type==="wall")walls.push([w.x,w.y,w.x2,w.y2,tpx(w)]);else if(w.type==="room"){const r=[w.x,w.y,w.x+w.w,w.y+w.h],t=tpx(w);walls.push([r[0],r[1],r[2],r[1],t],[r[2],r[1],r[2],r[3],t],[r[0],r[3],r[2],r[3],t],[r[0],r[1],r[0],r[3],t])}});
+ for(const q of walls){const h=q[4]/2,dx=q[2]-q[0],dy=q[3]-q[1],L=Math.hypot(dx,dy)||1,nx=dy/L,ny=-dx/L;
+  for(const[ex,ey]of[[q[0],q[1]],[q[2],q[3]]]){A(ex,ey,"End",Math.hypot(p.x-ex,p.y-ey)-3);for(const s of[1,-1]){const cx=ex+nx*h*s,cy=ey+ny*h*s;A(cx,cy,"Corner",Math.hypot(p.x-cx,p.y-cy)-2)}}
+  for(const[s,k]of[[0,"Centre"],[1,"Face"],[-1,"Face"]]){const ax=q[0]+nx*h*s,ay=q[1]+ny*h*s,t=Math.max(0,Math.min(1,((p.x-ax)*dx+(p.y-ay)*dy)/(L*L))),px=ax+dx*t,py=ay+dy*t;A(px,py,k,Math.hypot(p.x-px,p.y-py)+(s?0:1))}}
+ return best}
+function setSnap(p){const on=S.tool==="wall"||S.tool==="room"||S.tool==="dim"||S.tool==="calib",n=on?snapPt(p):null;if(JSON.stringify(n)!==JSON.stringify(SNP)){SNP=n;render(1)}}
+svg.addEventListener("pointerleave",()=>{if(SNP){SNP=null;render(1)}});
+function isect(P1,P2,P3,P4){const d=(P1.x-P2.x)*(P3.y-P4.y)-(P1.y-P2.y)*(P3.x-P4.x);if(Math.abs(d)<1e-6)return null;const t=((P1.x-P3.x)*(P3.y-P4.y)-(P1.y-P3.y)*(P3.x-P4.x))/d;return{x:P1.x+t*(P2.x-P1.x),y:P1.y+t*(P2.y-P1.y)}}
+function addWall(a,b){snap();const o=S.wo||0,R=v=>Math.round(v*1000)/1000;let A={x:a.x,y:a.y},B={x:b.x,y:b.y};
+ if(o){const L=Math.hypot(b.x-a.x,b.y-a.y)||1,h=tpx({})/2*o,nx=(b.y-a.y)/L*h,ny=-(b.x-a.x)/L*h;A={x:a.x+nx,y:a.y+ny};B={x:b.x+nx,y:b.y+ny};
+  if(WL&&WL.o===o){const pw=get(WL.id),m=isect(WL.A,WL.B,A,B);if(pw&&m){pw.x2=R(m.x);pw.y2=R(m.y);A=m}}}
+ const w=add({type:S.bm?"beam":"wall",x:R(A.x),y:R(A.y),x2:R(B.x),y2:R(B.y),ds:S.wd?1:0,...(S.bm?{t:200,tag:"B"+(S.items.filter(q=>q.type==="beam").length+1)}:{})});S.sel=w.id;WL=o?{id:w.id,A:{x:A.x,y:A.y},B,o}:null;ws={x:b.x,y:b.y};wp=null;render();wbarShow()}
+function woSel(){return `<select onchange="S.wo=+this.value"><option value="0" ${!S.wo?'selected':''}>Centre line</option><option value="1" ${S.wo===1?'selected':''}>Face, wall on left</option><option value="-1" ${S.wo===-1?'selected':''}>Face, wall on right</option></select>`}
+async function pdfRects(){const O=pdfjsLib.OPS,page=PDFP.page,vp=page.getViewport({scale:1}),ol=await page.getOperatorList();
+ const mul=(m,c)=>[m[0]*c[0]+m[1]*c[2],m[0]*c[1]+m[1]*c[3],m[2]*c[0]+m[3]*c[2],m[2]*c[1]+m[3]*c[3],m[4]*c[0]+m[5]*c[2]+c[4],m[4]*c[1]+m[5]*c[3]+c[5]];
+ let ctm=[1,0,0,1,0,0],pend=[];const st=[],out=[],FILL=new Set([O.fill,O.eoFill,O.fillStroke,O.eoFillStroke,O.closeFillStroke,O.closeEOFillStroke]),
+  P=(x,y)=>{const X=ctm[0]*x+ctm[2]*y+ctm[4],Y=ctm[1]*x+ctm[3]*y+ctm[5],q=vp.convertToViewportPoint(X,Y);return[BG.x+q[0]*BG.k,BG.y+q[1]*BG.k]};
+ for(let n=0;n<ol.fnArray.length;n++){const f=ol.fnArray[n],a=ol.argsArray[n];
+  if(f===O.save)st.push(ctm);else if(f===O.restore){if(st.length)ctm=st.pop()}else if(f===O.transform)ctm=mul(a,ctm);
+  else if(f===O.constructPath){pend=[];let ci=0;const co=a[1];for(const op of a[0]){if(op===O.rectangle){const p1=P(co[ci],co[ci+1]),p3=P(co[ci]+co[ci+2],co[ci+1]+co[ci+3]);ci+=4;pend.push([Math.min(p1[0],p3[0]),Math.min(p1[1],p3[1]),Math.max(p1[0],p3[0]),Math.max(p1[1],p3[1])])}else if(op===O.moveTo||op===O.lineTo)ci+=2;else if(op===O.curveTo)ci+=6;else if(op===O.curveTo2||op===O.curveTo3)ci+=4}}
+  else if(FILL.has(f)){out.push(...pend);pend=[]}else if(f===O.stroke||f===O.endPath||f===O.closeStroke)pend=[]}
+ return out}
+function projJSON(wp){return JSON.stringify({app:"planwire",...S,hist:[],sel:null,pdf:(wp&&BG)?{id:BG.id,name:BG.name,pn:BG.pn,src:BG.src,x:BG.x,y:BG.y,w:BG.w,h:BG.h,k:BG.k,op:BG.op,cal:BG.cal||0,geo:BG.geo||null}:undefined,cs:wp?CSL:undefined})}
+async function fileSave(name){const fn=name.replace(/[\\/:*?"<>|]+/g,"-").trim()||"project",json=projJSON(1);
+ try{localStorage.setItem("pw:"+name,projJSON(0))}catch(e){}
+ try{const d=window.claude?await window.claude.use("downloads"):null;if(d){await d.save({filename:fn+".json",data:json});$("hint").textContent="Project file: "+fn+".json";return true}}catch(e){if(e&&e.code==="declined")return false}
+ try{if(window.showSaveFilePicker){const h=await showSaveFilePicker({suggestedName:fn+".json",types:[{description:"Plan and Wire project",accept:{"application/json":[".json"]}}]}),w=await h.createWritable();await w.write(json);await w.close();return true}}catch(e){if(e&&e.name==="AbortError")return false}
+ try{const bl=new Blob([json],{type:"application/json"}),u=URL.createObjectURL(bl),a=document.createElement("a");a.href=u;a.download=fn+".json";document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},2000);return true}catch(e){}
+ prompt("Saving a file is not available in this view. Copy this text into a .json file to keep your project:",json);return false}
+function applyProj(d){S=Object.assign({items:[],nid:1,tool:"select",circ:-1,sel:null,volt:240,df:0.8,extra:1,hist:[]},d,{hist:[],sel:null,circ:-1,tool:"select"});delete S.app;S.nid=Math.max(S.nid||1,Math.max(0,...S.items.map(i=>i.id||0))+1);if(S.cn)S.cn.forEach((m,k)=>{CN[k]=m});ws=null;wp=null;wfrom=null;WL=null;regCS();mergeCS(S.cs);delete S.cs;BG=null;PDFP=null;if(!S.pid)S.pid="j"+Date.now().toString(36);if(d.pdf){BG=d.pdf;if(!BG.id)BG.id="p"+Date.now().toString(36);S.pdfId=BG.id;bgSave(null)}else restoreBG();delete S.pdf;refreshLib();tools();render()}
+$("sva").onclick=async()=>{const m=prompt("Save project as (a file is saved to your computer):",S.title||"Untitled project");if(m&&m.trim()){S.title=m.trim();await fileSave(S.title);render()}};
+$("sv").onclick=async()=>{let n=(S.title||"").trim();if(!n){const m=prompt("Project title:","Untitled project");if(!m||!m.trim())return;n=m.trim();S.title=n}await fileSave(n);render()};
+$("opf").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.items))throw 0;if(S.items.length&&!confirm("Open "+f.name+"? Unsaved changes to the current plan will be lost."))return;applyProj(d)}catch(x){alert("That file is not a Plan and Wire project.")}};
+let SHIFT=false,SQ=[],HD=[],DRC=null;
+function setTool(tt){PA=null;pbarShow();if(tt==="wall"||tt==="dwall"||tt==="beam"){S.wd=tt==="dwall"?1:0;S.bm=tt==="beam"?1:0}S.tool=(tt==="dwall"||tt==="beam")?"wall":tt;wfrom=null;tmp=null;ws=null;wp=null;WL=null;cal=null;wbarShow();tools();render()}
+function dRects(){if(DRC)return DRC;DRC=[];S.items.forEach(w=>{if(!w.ds)return;const h=tpx(w)/2,sg=w.type==="wall"?[[w.x,w.y,w.x2,w.y2]]:w.type==="room"?roomSegs(w).map(s=>[s.x1,s.y1,s.x2,s.y2]):[];sg.forEach(q=>{if(q[1]===q[3])DRC.push({x1:Math.min(q[0],q[2])-h,x2:Math.max(q[0],q[2])+h,y1:q[1]-h,y2:q[1]+h});else if(q[0]===q[2])DRC.push({x1:q[0]-h,x2:q[0]+h,y1:Math.min(q[1],q[3])-h,y2:Math.max(q[1],q[3])+h})})});return DRC}
+const inDot=(x,y)=>dRects().some(r=>x>r.x1-0.5&&x<r.x2+0.5&&y>r.y1-0.5&&y<r.y2+0.5);
+function joined(x,y,id){return S.items.some(w=>{if(w.id===id)return false;const sg=w.type==="wall"?[[w.x,w.y,w.x2,w.y2]]:w.type==="room"?roomSegs(w).map(s=>[s.x1,s.y1,s.x2,s.y2]):[];return sg.some(q=>{const dx=q[2]-q[0],dy=q[3]-q[1],L2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((x-q[0])*dx+(y-q[1])*dy)/L2));return Math.hypot(x-(q[0]+dx*t),y-(q[1]+dy*t))<=tpx(w)/2+0.6})})}
+function wallHandles(i,s,inline){if(!s)return"";const hd=[[i.x,i.y,1],[i.x2,i.y2,2]].map(q=>`<circle data-id="${i.id}" data-h="${q[2]}" cx="${q[0]}" cy="${q[1]}" r="6" fill="var(--panel)" stroke="var(--acc)" stroke-width="2" style="cursor:ew-resize"/>`).join("");if(inline)return hd;HD.push(hd);return""}
+function axp(o,ox,oy,on){if(!on)return[ox,oy];const dx=o.x2-o.x,dy=o.y2-o.y,L=Math.hypot(dx,dy)||1,d=(ox*dx+oy*dy)/L;return[d*dx/L,d*dy/L]}
+function setLen(v,fe){const s=get(S.sel);if(!s||!(v>0))return;snap();const R=q=>Math.round(q*1000)/1000,dx=s.x2-s.x,dy=s.y2-s.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,n=v*PX;if(fe){s.x=R(s.x2-ux*n);s.y=R(s.y2-uy*n)}else{s.x2=R(s.x+ux*n);s.y2=R(s.y+uy*n)}render()}
+function beamS(i,s){const t=tpx(i),h=t/2,c=s?"var(--acc)":"var(--mute)",dx=i.x2-i.x,dy=i.y2-i.y,L=Math.hypot(dx,dy)||1,nx=dy/L*h,ny=-dx/L*h,d=`stroke="${c}" stroke-width="1.4" stroke-dasharray="9 4"`;
+ return `<g data-id="${i.id}"><line x1="${i.x+nx}" y1="${i.y+ny}" x2="${i.x2+nx}" y2="${i.y2+ny}" ${d}/><line x1="${i.x-nx}" y1="${i.y-ny}" x2="${i.x2-nx}" y2="${i.y2-ny}" ${d}/><line x1="${i.x}" y1="${i.y}" x2="${i.x2}" y2="${i.y2}" stroke="${c}" stroke-width="0.8" stroke-dasharray="14 3 2 3"/><line x1="${i.x}" y1="${i.y}" x2="${i.x2}" y2="${i.y2}" stroke="transparent" stroke-width="${Math.max(t,14)}"/><text x="${(i.x+i.x2)/2}" y="${(i.y+i.y2)/2-h-4}" text-anchor="middle" font-size="9" fill="${c}">${esc(i.tag||"B")}</text></g>`}
+function scaleItems(f,cx,cy){S.items.forEach(i=>{if(i.type==="wire")return;if(i.x!==undefined){i.x=cx+(i.x-cx)*f;i.y=cy+(i.y-cy)*f}if(i.x2!==undefined){i.x2=cx+(i.x2-cx)*f;i.y2=cy+(i.y2-cy)*f}if(i.w!==undefined){i.w*=f;i.h*=f}if(i.t)i.t=Math.round(i.t*f);if(i.len)i.len=Math.round(i.len*f*100)/100})}
+function snapPt(p){const b=snapPt0(p),g=BG&&BG.geo?pdfSnap(p):null,o=openSnap(p),c=[[b,0],[g,2],[o,3]].filter(q=>q[0]);if(!c.length)return null;let best=c[0];for(const q of c)if(Math.hypot(q[0].x-p.x,q[0].y-p.y)-q[1]<Math.hypot(best[0].x-p.x,best[0].y-p.y)-best[1])best=q;return best[0]}
+function openSnap(p){let best=null,bd=12*(V.w/1000);for(const d of S.items){if(d.type!=="door"&&d.type!=="window")continue;const dl=(d.len||(d.type==="door"?0.9:1.2))*PX/2,h=Math.max(wallT(d),6)/2,hz=(d.rot||0)%2===0;for(const a of[-1,1])for(const b of[-1,1]){const x=hz?d.x+a*dl:d.x+b*h,y=hz?d.y+b*h:d.y+a*dl,k=Math.hypot(p.x-x,p.y-y)-3;if(k<bd){bd=k;best={x,y,k:"Opening"}}}}return best}
+function pdfSnap(p){let best=null,bd=10*(V.w/1000);const A=(x,y,k,d)=>{if(d<bd){bd=d;best={x,y,k}}};
+ for(const s of BG.geo){const ax=BG.x+s[0]*BG.w,ay=BG.y+s[1]*BG.h,bx=BG.x+s[2]*BG.w,by=BG.y+s[3]*BG.h;if(p.x<Math.min(ax,bx)-10||p.x>Math.max(ax,bx)+10||p.y<Math.min(ay,by)-10||p.y>Math.max(ay,by)+10)continue;
+  A(ax,ay,"PDF end",Math.hypot(p.x-ax,p.y-ay)-3);A(bx,by,"PDF end",Math.hypot(p.x-bx,p.y-by)-3);
+  const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((p.x-ax)*dx+(p.y-ay)*dy)/L2)),px=ax+dx*t,py=ay+dy*t;A(px,py,"PDF line",Math.hypot(p.x-px,p.y-py))}
+ return best}
+const rIn=i=>S.rdm==="c"?0:tpx(i),rW=i=>(Math.max(0,i.w-rIn(i))/PX).toFixed(2),rH=i=>(Math.max(0,i.h-rIn(i))/PX).toFixed(2),rA=i=>(Math.max(0,i.w-rIn(i))*Math.max(0,i.h-rIn(i))/PX/PX).toFixed(1);
+D.sw2w2={n:"Switch 2-way 2-gang",w:0,s:"S2W2",g:"sw",mk:null,m:1.5};DEF.sw2w2=0;
+const VV=c=>`<path d="M-3.5 3.5L-10 10V5" ${PB(c)[0]}/>`;
+Object.assign(SY,{
+ sw2:c=>SW(c,2),sw3:c=>SW(c,3),swtw:c=>SW(c,1,VV(c)),sw2w2:c=>SW(c,2,VV(c)),
+ swint:W_((c,b,p)=>`<circle r="5" ${p}/><path d="M3.5-3.5L13-13V-8M-3.5-3.5L-13-13V-8M-3.5 3.5L-13 13V8M3.5 3.5L13 13V8" ${b}/>`),
+ socket:W_((c,b)=>`<path d="M-9 8V0A9 9 0 0 1 9 0V8" ${b}/><path d="M-1-10L-1-15M-1-12.5L3-15" ${b}/>`),
+ sock2:W_((c,b)=>`<path d="M-14 8V1A7 7 0 0 1 0 1V8M0 1A7 7 0 0 1 14 1V8" ${b}/><path d="M-7-7L-7-12M7-7L7-12M-7-9.5L-3-12M7-9.5L11-12" ${b}/>`),
+ bell:W_((c,b,p)=>`<path d="M-10 3A10 10 0 0 1 10 3Z" ${p}/><path d="M-12 3H12M0 3V12M-5 12H5" ${b}/>`),
+ cu:W_((c,b,p)=>`<rect x="-18" y="-13" width="36" height="26" ${p}/><path d="M18-13L-18 13M18-6L-8.3 13M18 0L0 13M18 6L8.3 13" ${b}/>`),
+ ccu:W_((c,b,p)=>`<rect x="-16" y="-8" width="32" height="16" ${p}/><path d="M-8-8L-8-14M-8-11L-4-14" ${b}/>`)
+});
+let SE=null;
+function shapesSvg(sh,c){return sh.map(s=>{const f=s.f?c:"none";if(s.t==="l")return `<line x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`;if(s.t==="c")return `<circle cx="${s.x}" cy="${s.y}" r="${s.r}" fill="${f}" stroke="${c}" stroke-width="2"/>`;if(s.t==="r")return `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" fill="${f}" stroke="${c}" stroke-width="2"/>`;if(s.t==="a"){const sa=Math.sin(s.ang),ca=Math.cos(s.ang),R=v=>Math.round(v*100)/100;return `<path d="M${R(s.x-s.r*sa)} ${R(s.y+s.r*ca)}A${s.r} ${s.r} 0 0 0 ${R(s.x+s.r*sa)} ${R(s.y-s.r*ca)}Z" fill="${f}" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>`}return `<text x="${s.x}" y="${s.y+3}" font-size="9" text-anchor="middle" font-weight="600" fill="${c}">${esc(s.s)}</text>`}).join("")}
+function regCS(){CSL.forEach(c=>{const lo=c.g==="lt"||c.g==="sw";D[c.key]={n:c.n,w:c.w,s:c.s,g:c.g,mk:null,m:c.mm||({sock:2.5,app:2.5,cook:4})[c.g]||1.5};DEF[c.key]=lo?0:c.g==="sock"?1:c.g==="app"?2:c.g==="cook"?4:0;SY[c.key]=col=>shapesSvg(c.sh,col)})}
+function sePt(e){const s=$("sme"),p=s.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(s.getScreenCTM().inverse());return{x:Math.max(-20,Math.min(20,Math.round(q.x))),y:Math.max(-20,Math.min(20,Math.round(q.y)))}}
+const rectOf=(a,b)=>({t:"r",x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y),f:SE?SE.fill:0});
+function symDraw(){const s=$("sme");if(!s||!SE)return;let g="";for(let i=-20;i<=20;i+=2)g+=`<path d="M${i} -20V20M-20 ${i}H20" stroke="var(--grid)" stroke-width=".15" fill="none"/>`;g+=`<path d="M0-20V20M-20 0H20" stroke="var(--line)" stroke-width=".25" fill="none"/>`;g+=shapesSvg(SE.sh,"var(--ink)");
+ if(SE.p&&SE.cur){const a=SE.p,b=SE.cur,t=SE.tool;g+=t==="l"?shapesSvg([{t:"l",x1:a.x,y1:a.y,x2:b.x,y2:b.y}],"var(--acc)"):t==="c"?shapesSvg([{t:"c",x:a.x,y:a.y,r:Math.hypot(b.x-a.x,b.y-a.y),f:SE.fill}],"var(--acc)"):t==="r"?shapesSvg([rectOf(a,b)],"var(--acc)"):t==="a"?shapesSvg([{t:"a",x:a.x,y:a.y,r:Math.hypot(b.x-a.x,b.y-a.y),ang:Math.atan2(b.y-a.y,b.x-a.x),f:SE.fill}],"var(--acc)"):""}
+ if(SE.cur)g+=`<circle cx="${SE.cur.x}" cy="${SE.cur.y}" r=".7" fill="var(--acc)"/>`;s.innerHTML=g}
+function symTool(t){SE.tool=t;SE.p=null;["l","c","r","a","x"].forEach(k=>{const b=$("st_"+k);if(b){b.style.background=k===t?"var(--acc)":"";b.style.color=k===t?"#fff":""}});symDraw()}
+function symOpen(key){const ex=key&&CSL.find(c=>c.key===key);SE={sh:ex?JSON.parse(JSON.stringify(ex.sh)):[],tool:"l",p:null,key:ex?ex.key:null,fill:0,cur:null};
+ let m=$("sm");if(!m){m=document.createElement("div");m.id="sm";document.body.appendChild(m)}
+ m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;display:flex;align-items:center;justify-content:center";
+ m.innerHTML=`<div style="background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px;max-width:min(96vw,720px);max-height:94vh;overflow:auto"><h3 style="margin:0 0 8px">Symbol maker</h3><div style="display:flex;gap:12px;flex-wrap:wrap"><svg id="sme" viewBox="-20 -20 40 40" width="300" height="300" style="border:1px solid var(--line);background:var(--bg);touch-action:none;cursor:crosshair;max-width:100%"></svg><div style="flex:1;min-width:210px"><div class="row"><button class="btn" id="st_l" onclick="symTool('l')">Line</button><button class="btn" id="st_c" onclick="symTool('c')">Circle</button><button class="btn" id="st_r" onclick="symTool('r')">Rectangle</button><button class="btn" id="st_a" onclick="symTool('a')">Half circle</button><button class="btn" id="st_x" onclick="symTool('x')">Text</button></div><div class="row"><label><input type="checkbox" onchange="SE.fill=this.checked?1:0"> Filled shape</label></div><div class="row"><button class="btn" onclick="SE.sh.pop();SE.p=null;symDraw()">Undo</button><button class="btn" onclick="SE.sh=[];SE.p=null;symDraw()">Clear</button></div><div class="row">Name <input id="sn" value="${esc(ex?ex.n:"")}" placeholder="e.g. Doorbell"></div><div class="row">Tag <input id="stg" style="width:70px" maxlength="4" value="${esc(ex?ex.s:"")}"> Watts <input id="sw_" type="number" min="0" value="${ex?ex.w:0}"></div><div class="row">Group <select id="sg">${[["cus","Custom symbols"],["sw","Switches"],["sock","Sockets"],["lt","Lighting"],["app","Appliances"],["cook","Cooker"],["dist","Other (no load)"]].map(x=>`<option value="${x[0]}" ${ex&&ex.g===x[0]?"selected":""}>${x[1]}</option>`).join("")}</select></div><div class="row">Min cable <select id="smm">${[[0,"Group default"],[1.5,"1.5"],[2.5,"2.5"],[4,"4"],[6,"6"],[10,"10"],[16,"16"]].map(x=>`<option value="${x[0]}" ${ex&&(ex.mm||0)===x[0]?"selected":""}>${x[1]}</option>`).join("")}</select> mm²</div><div class="row"><button class="btn" onclick="symSave()"><b>Save symbol</b></button><button class="btn" onclick="symClose()">Cancel</button></div><div class="hint">Click two points to draw a line or rectangle. For a circle, click the centre and then a point on its edge. The grid step is 1 unit.</div></div></div></div>`;
+ const s=$("sme");s.onpointermove=e=>{SE.cur=sePt(e);symDraw()};
+ s.onpointerdown=e=>{const q=sePt(e),t=SE.tool;if(t==="x"){const v=prompt("Text (up to 4 characters):","");if(v)SE.sh.push({t:"x",x:q.x,y:q.y,s:v.slice(0,4)});symDraw();return}
+  if(!SE.p){SE.p=q;symDraw();return}const a=SE.p;SE.p=null;
+  if(t==="l"){if(a.x!==q.x||a.y!==q.y)SE.sh.push({t:"l",x1:a.x,y1:a.y,x2:q.x,y2:q.y})}
+  else if(t==="c"){const r=Math.round(Math.hypot(q.x-a.x,q.y-a.y)*2)/2;if(r>0)SE.sh.push({t:"c",x:a.x,y:a.y,r,f:SE.fill})}
+  else if(t==="r"){const r=rectOf(a,q);if(r.w&&r.h)SE.sh.push(r)}
+  else if(t==="a"){const r=Math.round(Math.hypot(q.x-a.x,q.y-a.y)*2)/2;if(r>0)SE.sh.push({t:"a",x:a.x,y:a.y,r,ang:Math.atan2(q.y-a.y,q.x-a.x),f:SE.fill})}
+  symDraw()};
+ symTool("l")}
+function symSave(){const n=($("sn").value||"").trim();if(!n){alert("Give the symbol a name.");return}if(!SE.sh.length){alert("Draw the symbol first.");return}
+ const key=SE.key||"cs"+Date.now().toString(36);const e={key,n,w:Math.max(0,+$("sw_").value||0),s:(($("stg").value||n.slice(0,3))).toUpperCase().slice(0,4),g:$("sg").value,mm:+$("smm").value||0,sh:SE.sh},i=CSL.findIndex(c=>c.key===key);
+ if(i>=0)CSL[i]=e;else CSL.push(e);cslSave();regCS();symClose();S.tool=key;tools();render()}
+function symClose(){const m=$("sm");if(m)m.remove();SE=null}
+function csHtml(){const cs=CSL;if(!cs.length)return"";return '<h3>Custom symbols</h3><table>'+cs.map(c=>`<tr><td><svg width="34" height="30" viewBox="-20 -17 40 34">${shapesSvg(c.sh,"var(--ink)")}</svg> ${esc(c.n)}</td><td class="n"><button class="btn" onclick="symOpen('${c.key}')">Edit</button> <button class="btn" onclick="symDel('${c.key}')">Delete</button></td></tr>`).join("")+'</table>'}
+function symDel(k){if(!confirm("Delete this symbol and every use of it on the plan?"))return;CSL=CSL.filter(c=>c.key!==k);cslSave();S.items=S.items.filter(i=>i.type!==k);delete D[k];delete SY[k];if(S.tool===k)S.tool="select";tools();render()}
+let PA=null;
+function pbarShow(){let b=$("pbar");if(!PA){if(b)b.remove();return}if(!b){b=document.createElement("div");b.id="pbar";b.style.cssText="position:sticky;top:0;left:0;z-index:3;background:var(--panel);border-bottom:1px solid var(--line);padding:6px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap";document.querySelector(".canvas").insertBefore(b,$("svg"))}
+ b.innerHTML=`<b>Print area</b><span class="hint">Drag a rectangle around what to print.</span><label><input type="checkbox" id="pinc" ${BG?'checked':'disabled'}> Include imported PDF</label><button class="btn" onclick="pDo(1)">Print selected area</button><button class="btn" onclick="pDo(0)">Print whole plan</button><button class="btn" onclick="pCancel()">Cancel</button>`}
+function pDo(sel){if(!PA)return;const part=PA.part,inc=!!($("pinc")&&$("pinc").checked);let reg=null;if(sel){if(PA.a&&PA.b&&PA.a.x!==PA.b.x&&PA.a.y!==PA.b.y)reg={x1:PA.a.x,y1:PA.a.y,x2:PA.b.x,y2:PA.b.y};else{alert("Drag a rectangle around the area first.");return}}
+ PA=null;S.tool="select";pbarShow();tools();render();doPrint(part,reg,inc)}
+function pCancel(){PA=null;S.tool="select";pbarShow();tools();render()}
+function printPart(part){if(!gate("Print to PDF"))return;if(part==="plan"||part==="all"||part==="pdf"){if(part==="pdf"&&!BG){$("hint").textContent="Import a PDF first.";return}PA={part,a:null,b:null,drag:0};S.tool="parea";ws=null;wp=null;WL=null;tmp=null;wfrom=null;pbarShow();tools();render();$("hint").textContent="Drag a rectangle around the area to print, then click Print selected area.";return}doPrint(part)}
+Object.assign(SY,{switch:c=>SW(c,1)});
+function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open("planwire",2);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains("pdf"))d.createObjectStore("pdf",{keyPath:"id"});if(!d.objectStoreNames.contains("kv"))d.createObjectStore("kv",{keyPath:"k"})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
+async function pdfPut(rec){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction("pdf","readwrite");t.objectStore("pdf").put(rec);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+async function pdfGet(id){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction("pdf").objectStore("pdf").get(id);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function pdfAllRecs(){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction("pdf").objectStore("pdf").getAll();q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function pdfDelRec(id){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction("pdf","readwrite");t.objectStore("pdf").delete(id);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+let PLIB=[];
+async function refreshLib(){try{PLIB=(await pdfAllRecs()).filter(r=>r.proj===S.pid||r.id===S.pdfId).map(r=>({id:r.id,name:r.name}))}catch(e){PLIB=[]}panels()}
+async function bgSave(buf){if(!BG||!BG.id)return;const rec={id:BG.id,proj:S.pid||"",name:BG.name||"PDF",pn:BG.pn||1,src:BG.src,x:BG.x,y:BG.y,w:BG.w,h:BG.h,k:BG.k,op:BG.op,cal:BG.cal||0,geo:BG.geo||null};if(buf)rec.buf=buf;else{try{const o=await pdfGet(BG.id);if(o&&o.buf)rec.buf=o.buf}catch(e){}}try{await pdfPut(rec)}catch(e){}}
+async function restoreBG(){if(!S.pdfId||BG)return;try{const r=await pdfGet(S.pdfId);if(r){BG={src:r.src,x:r.x,y:r.y,w:r.w,h:r.h,k:r.k,op:r.op,cal:r.cal,geo:r.geo,id:r.id,name:r.name,pn:r.pn};render()}}catch(e){}}
+async function restorePage(){if(!BG||!BG.id||!window.pdfjsLib)return;try{const r=await pdfGet(BG.id);if(!r||!r.buf){$("hint").textContent="The original PDF file is not stored for this plan. Import it again to detect walls.";return}pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";await pdfWorkerSetup();const doc=await pdfjsLib.getDocument({data:r.buf.slice(0)}).promise;PDFP={page:await doc.getPage(r.pn||1)}}catch(e){}}
+function detachPdf(){bgSave();BG=null;PDFP=null;S.pdfId=null;render()}
+async function useLib(id){if(!gate("Import PDF"))return;try{const r=await pdfGet(id);if(!r)return;BG={src:r.src,x:r.x,y:r.y,w:r.w,h:r.h,k:r.k,op:r.op,cal:r.cal,geo:r.geo,id:r.id,name:r.name,pn:r.pn};PDFP=null;S.pdfId=id;render()}catch(e){}}
+async function delLib(id){if(!confirm("Delete this saved PDF for good?"))return;try{await pdfDelRec(id)}catch(e){}if(BG&&BG.id===id){BG=null;PDFP=null;S.pdfId=null}await refreshLib();render()}
+function libHtml(){if(!PLIB.length)return"";return '<h3>Saved PDFs</h3><table>'+PLIB.map(p=>`<tr><td>${esc(p.name)}${BG&&BG.id===p.id?" (in plan)":""}</td><td class="n">${BG&&BG.id===p.id?"":`<button class="btn" onclick="useLib('${p.id}')">Use</button> `}<button class="btn" onclick="delLib('${p.id}')">Delete</button></td></tr>`).join("")+'</table><div class="hint">Removing a PDF from the plan keeps it here. Delete removes it for good.</div>'}
+function newProject(){if((S.items.length||BG||S.title)&&!confirm("Start a new project? The current plan and its autosave are cleared. Projects saved with Save as are kept."))return;
+ try{localStorage.removeItem("planwire")}catch(e){}
+ S={items:[],nid:1,tool:"select",circ:-1,sel:null,volt:240,df:0.8,extra:1,hist:[],mig:1,pid:"j"+Date.now().toString(36)};CN.splice(0,8,"Lighting","Sockets A","Sockets B","Air conditioning","Cooker","Fans","Water heater","Shower");
+ BG=null;PDFP=null;ws=null;wp=null;WL=null;tmp=null;wfrom=null;PA=null;pbarShow();wbarShow();V={x:0,y:0,w:1000,h:680};setV();refreshLib();tools();render()}
+let CSL=[];try{CSL=JSON.parse(localStorage.getItem("pwsym")||"[]")}catch(e){}
+function cslSave(){try{localStorage.setItem("pwsym",JSON.stringify(CSL))}catch(e){}}
+function mergeCS(arr){if(!Array.isArray(arr))return;arr.forEach(c=>{if(c&&c.key&&!CSL.find(x=>x.key===c.key))CSL.push(c)});cslSave();regCS()}
+function matData(st,ta){const lb={};st.cl.forEach(c=>{if(c.len)lb[c.cab.mm]=(lb[c.cab.mm]||0)+c.len*1.1});let tl=0;for(const mm in lb)tl+=lb[mm];
+ const bc={};let sk=0;st.cl.forEach(c=>{if(c.n||c.len){bc[c.In]=(bc[c.In]||0)+1;if(c.sk)sk=1}});
+ const bm=S.items.filter(i=>i.type==="beam").reduce((s,b)=>s+Math.hypot(b.x2-b.x,b.y2-b.y)/PX,0);
+ const im=S.im||"B",route=tl/1.1;return{lb,tl,cond:im==="C"?0:route/Math.max(1,S.cg||1)*1.1,clips:im==="C"?Math.ceil(route/0.3):0,bc,sk,main:Object.keys(bc).length?mainBr(ta):0,nj:Math.ceil((st.cnt.light||0)/2),bm}}
+function setQ(k,v){S.mo=S.mo||{};if(v===""||isNaN(+v))delete S.mo[k];else S.mo[k]=Math.max(0,+v);render()}
+function setXQ(id,v){const x=(S.xi||[]).find(z=>z.id===id);if(x){x.qty=Math.max(0,+v||0);render()}}
+function delX(id){S.xi=(S.xi||[]).filter(z=>z.id!==id);render()}
+function addX(){const n=($("xn").value||"").trim();if(!n){$("hint").textContent="Type the item name first.";return}const q=parseFloat($("xq").value);S.xi=S.xi||[];S.xi.push({id:"x"+Date.now().toString(36),name:n,qty:q>=0?q:1});render()}
+function matHtml(st,ta){const md=matData(st,ta),q=(k,c)=>{const o=S.mo&&S.mo[k];return o!==undefined?o:c},ov=k=>S.mo&&S.mo[k]!==undefined;
+ const row=(k,nm,c,u,d)=>`<tr><td>${nm}</td><td class="n"><input type="number" min="0" step="any" value="${+(+q(k,c)).toFixed(d||0)}" onchange="setQ('${k}',this.value)"> ${u||""}${ov(k)?` <button class="btn noprint" title="Back to the drawn quantity" onclick="setQ('${k}','')">&#8635;</button>`:""}</td></tr>`;
+ let h='<table><tr><th>Item</th><th class="n">Qty</th></tr>';
+ for(const k in D)if(st.cnt[k])h+=row("d:"+k,D[k].n,st.cnt[k]);
+ for(const mm of Object.keys(md.lb).map(Number).sort((a,b)=>a-b))h+=row("c:"+mm,`Cable ${mm} mm\u00b2 (+10% waste)`,md.lb[mm],"m",1);
+ if(md.cond>0)h+=row("cond","Conduit (estimate)",md.cond,"m",1);if(md.clips>0)h+=row("clip","Cable clips (every 0.3 m)",md.clips);
+ for(const r of Object.keys(md.bc).map(Number).sort((a,b)=>a-b))h+=row("b:"+r,`MCB ${r} A`,md.bc[r]);
+ if(md.main)h+=row("bm",`Main switch / breaker ${md.main} A`,1);if(md.sk)h+=row("rcd","RCD 30 mA",1);
+ if(md.nj)h+=row("jb","Junction boxes (estimate)",md.nj);if(st.doors)h+=row("door","Doors",st.doors);if(st.wins)h+=row("win","Windows",st.wins);
+ if(st.walls)h+=row("wall","Walls (length)",st.walls,"m",1);if(md.bm>0.01)h+=row("beam","Beams (length)",md.bm,"m",1);if(st.area)h+=row("area","Floor area",st.area,"m\u00b2",1);
+ const rc=roomCounts();h+=row("rooms","Rooms (living, bedrooms, etc.)",rc.rooms)+row("corr","Corridors",rc.corr)+row("ver","Verandas / balconies",rc.ver)+row("stair","Stairs",rc.stair)+row("bath","Bath / washrooms",rc.bath);
+ h+=`<tr><td>Wire runs drawn</td><td class="n">${st.wires}</td></tr><tr><td colspan="2"><b>Added items</b></td></tr>`;
+ (S.xi||[]).forEach(x=>{h+=`<tr><td>${esc(x.name)}</td><td class="n"><input type="number" min="0" step="any" value="${x.qty}" onchange="setXQ('${x.id}',this.value)"> <button class="btn noprint" onclick="delX('${x.id}')">Delete</button></td></tr>`});
+ return h+`<tr class="noprint"><td colspan="2"><input id="xn" placeholder="Item name" style="width:130px"> <input id="xq" type="number" min="0" step="any" placeholder="Qty" style="width:70px"> <button class="btn" onclick="addX()">Add item</button></td></tr></table>`}
+function costHtml(st,ta){const P=S.pr||{},pd=P.d||{},pc=P.c||{},pb=P.b||{},pm=P.m||{},px=P.x||{},cur=S.cur||"KES",f=n=>n.toLocaleString(undefined,{maximumFractionDigits:2}),md=matData(st,ta),q=(k,c)=>{const o=S.mo&&S.mo[k];return o!==undefined?o:c};let tot=0;
+ const R=(g,k,nm,qq,qs,u)=>{tot+=qq*u;return `<tr><td>${nm}</td><td class="n">${qs}</td><td class="n"><input type="number" min="0" step="any" value="${u||""}" onchange="setP('${g}','${k}',this.value)"></td><td class="n">${f(qq*u)}</td></tr>`};
+ let h=`</div><div class="sec" data-s="cost"><h3>Cost estimate</h3><div class="row">Currency <input style="width:80px" value="${esc(cur)}" onchange="S.cur=this.value||'KES';render()"></div><table><tr><th>Item</th><th class="n">Qty</th><th class="n">Unit cost</th><th class="n">Total</th></tr>`;
+ for(const k in D)if(st.cnt[k]){const n=q("d:"+k,st.cnt[k]);h+=R("d",k,D[k].n,n,n,pd[k]||0)}
+ for(const mm of Object.keys(md.lb).map(Number).sort((a,b)=>a-b)){const n=q("c:"+mm,md.lb[mm]);h+=R("c",mm,`Cable ${mm} mm\u00b2 (per m, +10% waste)`,n,(+n).toFixed(1)+" m",pc[mm]||0)}
+ if(md.cond>0){const n=q("cond",md.cond);h+=R("c","cond","Conduit (per m, estimate)",n,(+n).toFixed(1)+" m",pc.cond||0)}if(md.clips>0){const n=q("clip",md.clips);h+=R("m","clip","Cable clips",n,n,pm.clip||0)}
+ for(const r of Object.keys(md.bc).map(Number).sort((a,b)=>a-b)){const n=q("b:"+r,md.bc[r]);h+=R("b",r,`MCB ${r} A`,n,n,pb[r]||0)}
+ if(md.main){const n=q("bm",1);h+=R("b","M"+md.main,`Main switch / breaker ${md.main} A`,n,n,pb["M"+md.main]||0)}
+ if(md.sk){const n=q("rcd",1);h+=R("b","RCD","RCD 30 mA (sockets and wet areas)",n,n,pb.RCD||0)}
+ if(md.nj){const n=q("jb",md.nj);h+=R("m","jb","Junction boxes (estimate)",n,n,pm.jb||0)}
+ if(st.doors){const n=q("door",st.doors);h+=R("m","door","Doors",n,n,pm.door||0)}
+ if(st.wins){const n=q("win",st.wins);h+=R("m","window","Windows",n,n,pm.window||0)}
+ if(st.walls){const n=q("wall",st.walls);h+=R("m","wall","Walls (per m of length)",n,(+n).toFixed(1)+" m",pm.wall||0)}
+ if(md.bm>0.01){const n=q("beam",md.bm);h+=R("m","beam","Beams (per m)",n,(+n).toFixed(1)+" m",pm.beam||0)}
+ if(st.area){const n=q("area",st.area);h+=R("m","area","Floor area (per m\u00b2)",n,(+n).toFixed(1)+" m\u00b2",pm.area||0)}
+ const rc=roomCounts();[["rooms","Rooms"],["corr","Corridors"],["ver","Verandas / balconies"],["stair","Stairs"],["bath","Bath / washrooms"]].forEach(z=>{const n=q(z[0],rc[z[0]]);if(n>0)h+=R("m",z[0],z[1],n,n,pm[z[0]]||0)});
+ (S.xi||[]).forEach(x=>{h+=R("x",x.id,esc(x.name),x.qty,x.qty,px[x.id]||0)});
+ return h+`<tr><td><b>Total</b></td><td></td><td></td><td class="n"><b>${f(tot)} ${esc(cur)}</b></td></tr></table>`}
+document.body.dataset.lic="0";
+const PUBKEY={"kty":"EC","crv":"P-256","x":"-4ngeeO3C6V5yMeh_n3nSNSUs_Dc2KDEv6T3j8Ju_Qs","y":"PXvlv3SinbWc5lNPyt248AHkmdyQI-dseJN5WXUfHso"};
+let DEV="",LIC={ok:false,e:0,p:""};
+const b64u=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a};
+async function devInit(){let id=null;try{id=localStorage.getItem("pw_dev")}catch(e){}
+ if(!id){try{const d=await idb();id=await new Promise(r=>{const q=d.transaction("kv").objectStore("kv").get("dev");q.onsuccess=()=>r(q.result&&q.result.v);q.onerror=()=>r(null)})}catch(e){}}
+ if(!id){const a=new Uint8Array(12);crypto.getRandomValues(a);const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="";for(const v of a)s+=A[v%32];id=s.slice(0,4)+"-"+s.slice(4,8)+"-"+s.slice(8,12)}
+ try{localStorage.setItem("pw_dev",id)}catch(e){}try{const d=await idb();d.transaction("kv","readwrite").objectStore("kv").put({k:"dev",v:id})}catch(e){}DEV=id;return id}
+async function licVerify(code){try{const m=String(code).trim().match(/^PW1\.([\w-]+)\.([\w-]+)$/);if(!m)return{err:"That code is not valid."};
+ const key=await crypto.subtle.importKey("jwk",PUBKEY,{name:"ECDSA",namedCurve:"P-256"},false,["verify"]);
+ const ok=await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},key,b64u(m[2]),new TextEncoder().encode(m[1]));if(!ok)return{err:"That code is not valid."};
+ const p=JSON.parse(new TextDecoder().decode(b64u(m[1])));if(p.d!==DEV)return{err:"This code was issued for a different device."};
+ const now=Date.now()/1000;if(now>p.e)return{err:"This code has expired."};if(now<p.s-86400)return{err:"This code is not active yet."};
+ return{ok:1,p:p.p,s:p.s*1000,e:p.e*1000,n:p.n||"",m:p.m||"",i:(p.i||p.s)*1000}}catch(e){return{err:"The code could not be checked in this browser."}}}
+function licOn(){return LIC.ok&&Date.now()<LIC.e}
+function licUI(){const on=licOn();document.body.dataset.lic=on?"1":"0";const b=$("lic");if(b)b.textContent=on?"Premium active":"Get Premium"}
+function gate(feat){const now=Date.now();let seen=0;try{seen=+localStorage.getItem("pw_seen")||0}catch(e){}
+ if(now<seen-6e5){LIC.ok=false;licUI();premium(feat,"The device clock was set back. Please correct the date and time.");return false}
+ try{localStorage.setItem("pw_seen",String(Math.max(seen,now)))}catch(e){}
+ licUI();if(licOn())return true;premium(feat);return false}
+async function licInit(){await devInit();let c=null;try{c=localStorage.getItem("pw_lic")}catch(e){}if(c){const r=await licVerify(c);if(r.ok)LIC={...r,ok:true,code:c}}licUI()}
+async function licActivate(code){const r=await licVerify(code);if(!r.ok)return r;if(!(licOn()&&LIC.e>=r.e)){LIC={...r,ok:true,code:String(code).trim()};try{localStorage.setItem("pw_lic",LIC.code)}catch(e){}}licUI();return r}
+function licClose(){const m=$("lm");if(m)m.remove()}
+function licCopy(){try{navigator.clipboard.writeText(DEV)}catch(e){}try{const i=$("lmd"),r=document.createRange(),s=getSelection();r.selectNodeContents(i);s.removeAllRanges();s.addRange(r)}catch(e){}}
+function licParse(t){const o={},a=t.match(/Ksh\.?\s?([\d,]+(?:\.\d+)?)/i),c=t.match(/\b[A-Z][A-Z0-9]{9}\b/);if(a)o.amt=parseFloat(a[1].replace(/,/g,""));if(c)o.code=c[0];return o}
+function licMsg(ft){const ta=$("lmp2"),pay=ta?ta.value.trim():"",x=licParse(pay);
+ if(ft&&x.amt){const want=x.amt>=1000?"month":x.amt>=250?"week":null;if(want)document.querySelectorAll('input[name="lmp"]').forEach(r=>{r.checked=r.value===want})}
+ const p=(document.querySelector('input[name="lmp"]:checked')||{value:"week"}).value,t="Hello, I have paid KSh "+(p==="week"?250:1000)+" ("+(p==="week"?"weekly":"monthly")+") to Till 1763338 for Plan and Wire Premium.\nMy Device ID: "+DEV+(pay?"\nPayment message: "+pay:"");
+ const w=$("lmw"),e=$("lme"),d=$("lmx");if(d)d.textContent=pay?"Detected: "+(x.amt?"KSh "+x.amt:"no amount")+(x.code?", code "+x.code:"")+". It will be sent with your Device ID.":"";
+ if(w)w.href="https://wa.me/254741851583?text="+encodeURIComponent(t);if(e)e.href="mailto:josephwambuamutinda0@gmail.com?subject="+encodeURIComponent("Plan and Wire Premium - "+DEV)+"&body="+encodeURIComponent(t)}
+function licMsgOld(){const p=(document.querySelector('input[name="lmp"]:checked')||{value:"week"}).value,t="Hello, I have paid KSh "+(p==="week"?250:1000)+" ("+(p==="week"?"weekly":"monthly")+") to Till 1763338 for Plan and Wire Premium. My Device ID is "+DEV+".";
+ const w=$("lmw"),e=$("lme");if(w)w.href="https://wa.me/254741851583?text="+encodeURIComponent(t);if(e)e.href="mailto:josephwambuamutinda0@gmail.com?subject="+encodeURIComponent("Plan and Wire Premium")+"&body="+encodeURIComponent(t)}
+function licCopyOld(){const i=$("lmd");try{navigator.clipboard.writeText(DEV)}catch(e){}if(i)i.select()}
+function licClose2(){}
+function licNoop(){}
+async function licGo(){const s=$("lms"),v=($("lmc").value||"").trim();if(!v){s.textContent="Paste your licence code first.";return}s.textContent="Checking...";const r=await licActivate(v);
+ if(r.ok){s.textContent="Activated. Valid until "+new Date(r.e).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})+". You can use the feature now.";setTimeout(()=>{premium()},1400)}else s.textContent=r.err}
+function premium(feat,warn){licClose();const m=document.createElement("div");m.id="lm";m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;display:flex;align-items:center;justify-content:center;padding:10px";
+ const act=licOn(),fd=d=>new Date(d).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+ m.innerHTML=`<div style="background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px;max-width:min(96vw,460px);max-height:94vh;overflow:auto"><h3 style="margin:0 0 6px">Premium</h3>${warn?`<div class="hint" style="color:#c0392b">${esc(warn)}</div>`:""}${feat?`<div class="hint" style="margin-bottom:6px">${esc(feat)} is a premium feature.</div>`:""}${act?`<div class="row"><b>Active:</b> ${LIC.p==="W"?"Weekly":"Monthly"} until ${fd(LIC.e)}</div>`:""}<table><tr><td>Weekly</td><td class="n"><b>KSh 250</b></td></tr><tr><td>Monthly</td><td class="n"><b>KSh 1,000</b></td></tr></table><p style="margin:8px 0 4px">Premium unlocks <b>Import PDF</b>, <b>Print to PDF</b> and <b>Open a project</b>.</p><ol style="margin:6px 0 8px;padding-left:18px"><li>Pay to M-Pesa <b>Till 1763338</b> (Victor Wambua Mutinda).</li><li>Paste the M-Pesa payment message below, then send it together with your Device ID by WhatsApp or email (to <b>0741851583</b> or <b>josephwambuamutinda0@gmail.com</b>).</li><li>Paste the licence code you receive below.</li></ol><div class="row">Device ID <b id="lmd" style="font:600 15px ui-monospace,monospace;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);user-select:all">${DEV||"..."}</b><button class="btn" onclick="licCopy()">Copy</button></div><div class="hint">This ID is fixed to this browser. It cannot be edited, and it is added to your message automatically.</div><div class="row"><label><input type="radio" name="lmp" value="week" checked onchange="licMsg()"> Weekly</label><label><input type="radio" name="lmp" value="month" onchange="licMsg()"> Monthly</label></div><div class="row">Paste the M-Pesa payment message</div><textarea id="lmp2" rows="3" style="width:100%;font-size:12px" placeholder="e.g. SGH7X8Y9Z0 Confirmed. Ksh250.00 paid to VICTOR WAMBUA MUTINDA..." oninput="licMsg(1)"></textarea><div id="lmx" class="hint"></div><div class="row"><a class="btn" id="lmw" target="_blank" rel="noopener" href="#" style="text-decoration:none;color:inherit">WhatsApp</a><a class="btn" id="lme" target="_blank" rel="noopener" href="#" style="text-decoration:none;color:inherit">Email</a></div><div class="row">Licence code</div><textarea id="lmc" rows="3" style="width:100%;font-size:12px" placeholder="PW1...."></textarea><div class="row"><button class="btn" onclick="licGo()"><b>Activate</b></button><button class="btn" onclick="licClose()">Close</button></div><div id="lms" class="hint"></div></div>`;
+ document.body.appendChild(m);licMsg();if(!DEV)devInit().then(()=>{const i=$("lmd");if(i)i.textContent=DEV;licMsg()})}
+$("pdfin").addEventListener("click",e=>{if(!gate("Import PDF"))e.preventDefault()});
+$("opf").addEventListener("click",e=>{if(!gate("Open project"))e.preventDefault()});
+licInit();
+function licName(){try{return localStorage.getItem("pw_name")||""}catch(e){return""}}
+function licCodeOk(c){return /^[A-Z0-9]{10}$/.test(c)}
+function licForm(){const n=(($("lmn")||{}).value||"").trim(),c=((($("lmp2")||{}).value)||"").trim().toUpperCase(),p=(document.querySelector('input[name="lmp"]:checked')||{value:"week"}).value;return{n,c,p}}
+function licMsg(){const f=licForm();try{localStorage.setItem("pw_name",f.n)}catch(e){}
+ const t="Hello, I have paid KSh "+(f.p==="week"?250:1000)+" ("+(f.p==="week"?"weekly":"monthly")+") to Till 1763338 for Plan and Wire Premium.\nName: "+f.n+"\nDevice ID: "+DEV+"\nM-Pesa code: "+f.c;
+ const w=$("lmw"),e=$("lme"),d=$("lmx");if(w)w.href="https://wa.me/254741851583?text="+encodeURIComponent(t);if(e)e.href="mailto:josephwambuamutinda0@gmail.com?subject="+encodeURIComponent("Plan and Wire Premium - "+f.n)+"&body="+encodeURIComponent(t);
+ if(d&&f.c&&!licCodeOk(f.c))d.textContent="The M-Pesa code has 10 letters and numbers, for example SGH7X8Y9Z0.";else if(d&&d.dataset.sent!=="1")d.textContent=""}
+function licSend(){const f=licForm(),d=$("lmx");if(f.n.length<2){d.textContent="Type your name first.";return false}if(!licCodeOk(f.c)){d.textContent="Type only the M-Pesa code: 10 letters and numbers, for example SGH7X8Y9Z0.";return false}licMsg();d.textContent="Message ready. Please send it, then wait for your licence code.";return true}
+function invHtml(){const L=LIC,ds=d=>new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}),amt=L.p==="W"?250:1000,days=L.p==="W"?7:30,
+ no="PW-"+new Date(L.i).toISOString().slice(0,10).replace(/-/g,"")+"-"+((L.m||DEV.replace(/-/g,"")).slice(0,4)),nm=L.n||"Customer";
+ return `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${no}</title><style>body{font:14px/1.5 system-ui,Segoe UI,sans-serif;color:#1b2a3a;margin:0;padding:32px}h1{margin:0;font-size:28px;letter-spacing:1px}.top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1b2a3a;padding-bottom:12px}.r{text-align:right}table{width:100%;border-collapse:collapse;margin-top:20px}td,th{padding:9px 8px;border-bottom:1px solid #cfd7df;text-align:left}th{background:#eef1f4}td.r,th.r{text-align:right}.tot td{font-weight:700;border-top:2px solid #1b2a3a;border-bottom:0}.paid{display:inline-block;border:2px solid #2b7a4b;color:#2b7a4b;font-weight:700;padding:2px 10px;border-radius:6px;transform:rotate(-4deg)}.mut{color:#5d6b7a;font-size:12px;margin-top:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}</style></head><body><div class="top"><div><h1>INVOICE</h1><div>Plan and Wire Premium</div></div><div class="r"><div><b>Invoice no:</b> ${no}</div><div><b>Date issued:</b> ${ds(L.i)}</div><div class="paid">PAID</div></div></div><div class="grid"><div><b>Billed to</b><br>${esc(nm)}<br>Device ID: ${esc(DEV)}</div><div class="r"><b>Pay to</b><br>M-Pesa Till 1763338<br>Victor Wambua Mutinda<br>josephwambuamutinda0@gmail.com</div></div><table><tr><th>Description</th><th>Period</th><th class="r">Amount (KSh)</th></tr><tr><td>Plan and Wire Premium, ${L.p==="W"?"weekly":"monthly"} licence (${days} days)<br><span style="color:#5d6b7a">Import PDF, Print to PDF, Open a project</span></td><td>${ds(L.s)} to ${ds(L.e)}</td><td class="r">${amt.toLocaleString("en-GB",{minimumFractionDigits:2})}</td></tr><tr class="tot"><td></td><td class="r">Total paid</td><td class="r">KSh ${amt.toLocaleString("en-GB",{minimumFractionDigits:2})}</td></tr></table><div class="mut">Payment method: M-Pesa Till 1763338${L.m?", transaction code "+esc(L.m):""}.<br>This licence is valid only on the device shown above. Thank you for your business.</div></body></html>`}
+async function downloadInvoice(){const html=invHtml(),no="PW-"+new Date(LIC.i).toISOString().slice(0,10).replace(/-/g,"")+"-"+((LIC.m||DEV.replace(/-/g,"")).slice(0,4)),fn="Invoice-"+no+".html";
+ try{const d=window.claude?await window.claude.use("downloads"):null;if(d){await d.save({filename:fn,data:html});return}}catch(e){if(e&&e.code==="declined")return}
+ try{const bl=new Blob([html],{type:"text/html"}),u=URL.createObjectURL(bl),a=document.createElement("a");a.href=u;a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},2000)}catch(e){alert("The invoice could not be saved here. Use Print invoice and choose Save as PDF.")}}
+function printInvoice(){const f=document.createElement("iframe");f.style.cssText="position:fixed;width:0;height:0;border:0";f.srcdoc=invHtml();f.onload=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>f.remove(),90000)};document.body.appendChild(f)}
+function premium(feat,warn){licClose();const m=document.createElement("div");m.id="lm";m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;display:flex;align-items:center;justify-content:center;padding:10px";
+ const act=licOn(),fd=d=>new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+ m.innerHTML=`<div style="background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:14px;max-width:min(96vw,480px);max-height:94vh;overflow:auto"><h3 style="margin:0 0 6px">Premium</h3>${warn?`<div class="hint" style="color:#c0392b">${esc(warn)}</div>`:""}${feat?`<div class="hint" style="margin-bottom:6px">${esc(feat)} is a premium feature.</div>`:""}${act?`<div class="row"><b>Active:</b> ${LIC.p==="W"?"Weekly":"Monthly"} until ${fd(LIC.e)}${LIC.n?" - licensed to "+esc(LIC.n):""}</div><div class="row"><button class="btn" onclick="downloadInvoice()">Download invoice</button><button class="btn" onclick="printInvoice()">Print invoice</button></div>`:""}<table><tr><td>Weekly</td><td class="n"><b>KSh 250</b></td></tr><tr><td>Monthly</td><td class="n"><b>KSh 1,000</b></td></tr></table><p style="margin:8px 0 4px">Premium unlocks <b>Import PDF</b>, <b>Print to PDF</b> and <b>Open a project</b>.</p><ol style="margin:6px 0 8px;padding-left:18px"><li>Pay to M-Pesa <b>Till 1763338</b> (Victor Wambua Mutinda).</li><li>Fill in your name and the M-Pesa code below, then press <b>WhatsApp</b> or <b>Email</b> to send them with your Device ID.</li><li><b>Please be patient.</b> Your licence code is sent soon, after the owner confirms that your M-Pesa code matches the payment received on the till.</li><li>Paste the licence code below and press <b>Activate</b>. After activation you can download your invoice.</li></ol><div class="row">Device ID <b id="lmd" style="font:600 15px ui-monospace,monospace;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);user-select:none">${DEV||"..."}</b></div><div class="hint">This ID is fixed to this browser and is added to your message automatically.</div><div class="row">Your name <input id="lmn" value="${esc(licName())}" oninput="licMsg()" style="flex:1;min-width:170px" placeholder="Full name"></div><div class="row"><label><input type="radio" name="lmp" value="week" checked onchange="licMsg()"> Weekly KSh 250</label><label><input type="radio" name="lmp" value="month" onchange="licMsg()"> Monthly KSh 1,000</label></div><div class="row">M-Pesa code <input id="lmp2" maxlength="10" style="width:150px;text-transform:uppercase" placeholder="e.g. SGH7X8Y9Z0" oninput="this.value=this.value.toUpperCase();licMsg()"></div><div id="lmx" class="hint"></div><div class="row"><a class="btn" id="lmw" target="_blank" rel="noopener" href="#" onclick="return licSend()" style="text-decoration:none;color:inherit">Send on WhatsApp</a><a class="btn" id="lme" target="_blank" rel="noopener" href="#" onclick="return licSend()" style="text-decoration:none;color:inherit">Send by email</a></div><div class="hint">Email: josephwambuamutinda0@gmail.com</div><div class="row">Licence code</div><textarea id="lmc" rows="3" style="width:100%;font-size:12px" placeholder="PW1...."></textarea><div class="row"><button class="btn" onclick="licGo()"><b>Activate</b></button><button class="btn" onclick="licClose()">Close</button></div><div id="lms" class="hint"></div></div>`;
+ document.body.appendChild(m);licMsg();if(!DEV)devInit().then(()=>{const i=$("lmd");if(i)i.textContent=DEV;licMsg()})}
+D.cooker.g="cook";
+function cabFix(In,Ib,L,lim,mm){const k=Math.max(0,SZ.indexOf(+mm)),tb=MT[S.im||"B"]||MT.B,ca=CA[S.ta||30]||1,cg=CG[Math.min(Math.max(S.cg||1,1),9)]||0.5,iz=tb[k]*ca*cg,vd=MV[k]*Ib*L/1000/S.volt*100;return{mm:SZ[k],iz,vd,ok:iz>=In&&vd<=lim}}
+function gmcb(g){return S.gm&&S.gm[g]!==undefined?S.gm[g]:({sock:20,lt:6})[g]||0}
+function gmOf(t){const g=D[t]&&D[t].g;return gmcb(g==="sw"?"lt":g)}
+function setGM(g,v){S.gm=S.gm||{};S.gm[g]=+v;render()}
+function gmUI(){const G=[["lt","Lighting"],["sock","Sockets"],["app","Appliances"],["cook","Cooker"],["cus","Custom symbols"]];return '<div class="row"><b>Minimum MCB by group (A)</b></div><div class="row">'+G.map(g=>`<label>${g[1]} <select onchange="setGM('${g[0]}',this.value)">${[0,6,10,16,20,25,32,40,50,63].map(v=>`<option value="${v}" ${gmcb(g[0])===v?"selected":""}>${v||"Auto"}</option>`).join("")}</select></label>`).join("")+'</div>'}
+function coSel(k,f,vals,cur,calc,suf){return `<select onchange="setCO(${k},'${f}',this.value)" style="width:auto;padding:1px 2px">${[0,...vals].map(v=>`<option value="${v}" ${(cur||0)===v?"selected":""}>${v?v+suf:"Auto "+calc+suf}</option>`).join("")}</select>`}
+function setCO(k,f,v){S.co=S.co||{};S.co[k]=S.co[k]||{};S.co[k][f]=+v||0;render()}
+function roomCounts(){const o={rooms:0,corr:0,ver:0,stair:0,bath:0};S.items.forEach(i=>{if(i.type!=="room")return;const n=(i.name||"").toLowerCase();if(/corridor|passage|hallway|\bhall\b/.test(n))o.corr++;else if(/veranda|verandah|balcony/.test(n))o.ver++;else if(/stair/.test(n))o.stair++;else if(/bath|wash|toilet|\bwc\b|shower|lavator/.test(n))o.bath++;else o.rooms++});return o}
+$("tt").onclick=()=>{const m=document.querySelector(".app").classList.toggle("tmin");$("tt").textContent=m?"Show tools":"Hide tools";try{localStorage.setItem("pw_tmin",m?"1":"0")}catch(e){}};
+try{if(localStorage.getItem("pw_tmin")==="1"){document.querySelector(".app").classList.add("tmin");$("tt").textContent="Show tools"}}catch(e){}
+$("sp").onclick=()=>{const m=document.querySelector(".app").classList.toggle("smin");$("sp").textContent=m?"Show panel":"Hide panel";try{localStorage.setItem("pw_smin",m?"1":"0")}catch(e){}};
+try{if(localStorage.getItem("pw_smin")==="1"){document.querySelector(".app").classList.add("smin");$("sp").textContent="Show panel"}}catch(e){}
+const PDFJS_VER="3.11.174",PDF_MAIN=["https://cdnjs.cloudflare.com/ajax/libs/pdf.js/"+PDFJS_VER+"/pdf.min.js","https://cdn.jsdelivr.net/npm/pdfjs-dist@"+PDFJS_VER+"/build/pdf.min.js"],PDF_WORK=["https://cdnjs.cloudflare.com/ajax/libs/pdf.js/"+PDFJS_VER+"/pdf.worker.min.js","https://cdn.jsdelivr.net/npm/pdfjs-dist@"+PDFJS_VER+"/build/pdf.worker.min.js"];
+let PDFW=null;
+function loadScriptTag(u){return new Promise(r=>{const s=document.createElement("script");s.src=u;s.onload=()=>r(true);s.onerror=()=>r(false);document.head.appendChild(s)})}
+async function ensurePdfJs(){for(const u of PDF_MAIN){if(window.pdfjsLib)return;await loadScriptTag(u)}}
+// The worker is fetched and run from a blob: address, so it is same-origin. This avoids
+// the "setting up fake worker failed" error in desktop web views and strict browsers.
+async function pdfWorkerSetup(){if(!window.pdfjsLib)return;if(PDFW){pdfjsLib.GlobalWorkerOptions.workerSrc=PDFW;return}
+ for(const u of PDF_WORK){try{const r=await fetch(u);if(!r.ok)continue;const b=await r.blob();PDFW=URL.createObjectURL(new Blob([b],{type:"text/javascript"}));pdfjsLib.GlobalWorkerOptions.workerSrc=PDFW;return}catch(e){}}
+ pdfjsLib.GlobalWorkerOptions.workerSrc=PDF_WORK[0]}
+let LP=null,WDRAG=null;
+function rawPt(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());return{x:q.x,y:q.y}}
+function wEnds(w){const a=get(w.a),b=get(w.b);let ax=a.x,ay=a.y,bx=b.x,by=b.y;if(WDRAG&&WDRAG.id===w.id){if(WDRAG.end==="wa"){ax=WDRAG.p.x;ay=WDRAG.p.y}else{bx=WDRAG.p.x;by=WDRAG.p.y}}return[ax,ay,bx,by]}
+function wirePath(w){const e=wEnds(w),ax=e[0],ay=e[1],bx=e[2],by=e[3];if(w.mo==="x")return`M${ax} ${ay}H${w.m}V${by}H${bx}`;if(w.mo==="y")return`M${ax} ${ay}V${w.m}H${bx}V${by}`;return`M${ax} ${ay}H${bx}V${by}`}
+function wireHandles(w){const e=wEnds(w),ax=e[0],ay=e[1],bx=e[2],by=e[3],sg=v=>v>0?1:v<0?-1:0;let fa,fb,mid;
+ if(w.mo==="x"){fa=[sg(w.m-ax),0];fb=[-sg(bx-w.m),0];mid=[w.m,(ay+by)/2]}else if(w.mo==="y"){fa=[0,sg(w.m-ay)];fb=[0,-sg(by-w.m)];mid=[(ax+bx)/2,w.m]}else{fa=sg(bx-ax)?[sg(bx-ax),0]:[0,sg(by-ay)];fb=sg(by-ay)?[0,-sg(by-ay)]:[-sg(bx-ax),0];mid=[bx,ay]}
+ const c=(x,y,h)=>`<circle data-id="${w.id}" data-h="${h}" cx="${x}" cy="${y}" r="6" fill="var(--panel)" stroke="var(--acc)" stroke-width="2" style="cursor:crosshair"/>`;
+ return c(ax+fa[0]*16,ay+fa[1]*16,"wa")+c(bx+fb[0]*16,by+fb[1]*16,"wb")+c(mid[0],mid[1],"wm")}
+function wireMid(w,p){if(!w.mo){const e=wEnds(w);w.mo=Math.abs(e[2]-e[0])>=Math.abs(e[3]-e[1])?"x":"y"}w.m=w.mo==="x"?p.x:p.y}
+function applyWDrag(){const w=get(WDRAG.id);if(!w)return;const other=WDRAG.end==="wa"?w.b:w.a,p=WDRAG.p;let best=null,bd=26*(V.w/1000);S.items.forEach(d=>{if(isDev(d)&&d.id!==other){const dd=Math.hypot(d.x-p.x,d.y-p.y);if(dd<bd){bd=dd;best=d}}});if(best){if(WDRAG.end==="wa")w.a=best.id;else w.b=best.id;w.mo=null;delete w.m}}
+function resetRoute(){const w=get(S.sel);if(w){snap();w.mo=null;delete w.m;render()}}
+function resetTag(){const s=get(S.sel);if(s){snap();delete s.tdx;delete s.tdy;render()}}
+function symG(i,s,col){const c=s?'var(--acc)':(i.type==="db"?'var(--ink)':col),sc=i.sc||1,tx=i.x+(i.tdx||0),ty=i.y+30*sc+(i.tdy||0);
+ return `<g data-id="${i.id}" style="cursor:move"><g transform="translate(${i.x} ${i.y}) rotate(${i.ang||0}) scale(${sc})"><circle r="18" fill="transparent"/>${symK(i.type,c)}${wfrom===i.id?'<circle r="23" fill="none" stroke="var(--acc)" stroke-dasharray="4 3"/>':''}</g><text data-h="tag" x="${tx}" y="${ty}" text-anchor="middle" font-size="10" fill="var(--ink)" style="cursor:grab">${esc(i.tag||"")}</text>${s?`<circle data-h="sz" cx="${i.x+17*sc}" cy="${i.y-17*sc}" r="5" fill="var(--panel)" stroke="var(--acc)" stroke-width="2" style="cursor:nesw-resize"/>`:""}</g>`}
+async function openText(txt,name){if(S.items.length&&!confirm("Open "+name+"? Unsaved changes to the current plan will be lost."))return;try{const d=JSON.parse(txt);if(!Array.isArray(d.items))throw 0;applyProj(d)}catch(x){alert("That file is not a Plan and Wire project.")}}
+async function importB64(name,b64){const bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);await loadPdf(new File([u],name,{type:"application/pdf"}))}
+window.__pwPrinted=()=>{window.dispatchEvent(new Event("afterprint"))};
+addEventListener("keydown",e=>{if(!(e.ctrlKey||e.metaKey))return;const k=e.key.toLowerCase(),act={n:()=>newProject(),o:()=>$("opf").click(),s:()=>(e.shiftKey?$("sva"):$("sv")).click(),p:()=>printPart("plan"),z:()=>$("undo").click(),i:()=>$("pdfin").click()}[k];if(!act)return;if(k==="z"&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;e.preventDefault();act()});
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function stats(){
+ const cnt={},cl=Array.from({length:8},()=>({w:0,len:0,n:0,nl:0,sk:0,Lm:0,mn:0,va:0,mt:0,gm:0}));let wa=0,walls=0,doors=0,wins=0,rooms=0,area=0,wires=0;
+ for(const i of S.items){
+  if(isDev(i)){cnt[i.type]=(cnt[i.type]||0)+1;if(D[i.type].g!=="dist"){const q=cl[i.c||0];q.w+=i.watts||0;q.va+=(i.watts||0)/pfOf(i.type);q.n++;if(!isLight(i.type))q.nl++;if(isSock(i.type))q.sk++;q.mn=Math.max(q.mn,mnf(i.type));if(MOT.has(i.type))q.mt=1;q.gm=Math.max(q.gm,gmOf(i.type))}}
+  else if(i.type==="wall"){const l=Math.hypot(i.x2-i.x,i.y2-i.y)/PX;walls+=l;wa+=l*(i.t||S.wt||200)/1000}
+  else if(i.type==="room"){rooms++;area+=(Math.max(0,i.w-(S.rdm==="c"?0:tpx(i)))*Math.max(0,i.h-(S.rdm==="c"?0:tpx(i))))/PX/PX;walls+=2*(i.w+i.h)/PX;wa+=2*(i.w+i.h)/PX*(i.t||S.wt||200)/1000}
+  else if(i.type==="door")doors++;else if(i.type==="window")wins++;
+  else if(i.type==="wire"){const l=wlen(i);cl[wcOf(i)].len+=l;wires++}}
+ const dm=dists();for(const i of S.items)if(isDev(i)&&i.type!=="db"){const d=dm[i.id];if(d!==undefined&&d>cl[i.c||0].Lm)cl[i.c||0].Lm=d}
+ cl.forEach((c,k)=>{const ov=(S.co&&S.co[k])||{};c.Ib=c.va/S.volt;c.aIn=Math.max(brk(c.Ib),c.gm||6);c.In=ov.mcb||c.aIn;c.crv=c.mt?"C":"B";const lim=c.nl?5:3;c.aCab=cabFor(c.In,c.Ib,c.Lm,lim,c.mn||1.5);c.cab=ov.mm?cabFix(c.In,c.Ib,c.Lm,lim,ov.mm):c.aCab;c.ov=ov});
+ return{cnt,cl,dm,wa,walls,doors,wins,rooms,area,wires}}
+const BR=[6,10,16,20,25,32,40,50,63,80,100];
+const brk=a=>BR.find(b=>b>=a-1e-9)||125;
+const cab=b=>b<=10?1.5:b<=20?2.5:b<=25?4:b<=32?6:b<=40?10:16;
+
+function panels(){
+ const st=stats(),sel=S.sel?get(S.sel):null;let h="";
+ h+=projHtml();h+=csHtml();h+=libHtml();h+='<h3>Selected item</h3>';
+ if(!sel)h+='<div class="hint">Nothing selected. Use Select and click an item.</div>';
+ else{h+=`<div class="row"><b>${sel.type==="wire"?"Wire":sel.type==="room"?"Room":isDev(sel)?D[sel.type].n:sel.type}</b></div>`;
+  if(sel.type==="room")h+=`<div class="row">Name <input value="${esc(sel.name)}" oninput="upd('name',this.value,1)"></div>`;if(isDev(sel))h+=`<div class="row">Label <input value="${esc(sel.tag||'')}" oninput="upd('tag',this.value,1)"></div><div class="row">Rotation (°) <input type="number" step="15" value="${sel.ang||0}" onchange="upd('ang',+this.value)"> <button class="btn" onclick="rot()">Rotate 90°</button></div><div class="row">Size (%) <input type="number" min="30" max="800" step="10" value="${Math.round((sel.sc||1)*100)}" onchange="upd('sc',(+this.value||100)/100)"> <button class="btn" onclick="upd('sc',1)">Reset size</button> <button class="btn" onclick="resetTag()">Reset label</button></div><div class="hint">Drag the round corner handle to resize, and drag the label to move it.</div>`;if(sel.type==="wall"||sel.type==="room")h+=`<div class="row">Wall thickness (mm) <input type="number" min="50" max="600" step="10" value="${sel.t||S.wt||200}" onchange="upd('t',+this.value||200)"></div><div class="row">Style <select onchange="upd('ds',+this.value)"><option value="0" ${sel.ds?'':'selected'}>Solid (filled)</option><option value="1" ${sel.ds?'selected':''}>Dotted (no fill)</option></select></div>`;if(sel.type==="wall"||sel.type==="beam"){const L0=Math.hypot(sel.x2-sel.x,sel.y2-sel.y)/PX;h+=`<div class="row">Length (m) <input type="number" step="0.05" min="0.1" value="${L0.toFixed(2)}" onchange="setLen(+this.value,$('lfix').value==='e')"> <select id="lfix"><option value="s">Keep start fixed</option><option value="e">Keep end fixed</option></select></div><div class="hint">Or drag a round end handle to extend or shorten the wall in place.</div>`;if(sel.type==="beam")h+=`<div class="row">Beam width (mm) <input type="number" step="10" value="${sel.t||200}" onchange="upd('t',+this.value||200)"></div>`}
+ if(sel.type==="door"||sel.type==="window"){const o=sel.type==="door"?[["single","Single swing"],["double","Double swing"],["slide","Sliding"],["empty","Empty opening"]]:[["fixed","Fixed"],["double","Double glazed"],["casement","Casement"],["slide","Sliding"],["empty","Empty opening"]];h+=`<div class="row">Type <select onchange="upd('dt',this.value)">${o.map(x=>`<option value="${x[0]}" ${(sel.dt||o[0][0])===x[0]?'selected':''}>${x[1]}</option>`).join("")}</select></div><div class="row">Height (m) <input type="number" step="0.05" value="${sel.ht||(sel.type==="door"?2.1:1.2)}" onchange="upd('ht',+this.value)">${sel.type==="window"?` Sill (m) <input type="number" step="0.05" value="${sel.sl===undefined?0.9:sel.sl}" onchange="upd('sl',+this.value)">`:''}</div><div class="row"><button class="btn" onclick="flipD()">Mirror hinge side</button></div>`}if(sel.type==="dim")h+='<div class="hint">Drag the line to move it. Drag a round end handle to change where it starts or ends.</div>';if(sel.type==="text")h+=`<div class="row">Text <input value="${esc(sel.text)}" oninput="upd('text',this.value,1)"></div>`;
+  if(isDev(sel)&&sel.type!=="db"){h+=`<div class="row">Power (W) <input type="number" min="0" value="${sel.watts}" onchange="upd('watts',+this.value)"></div><div class="row">Circuit <select onchange="upd('c',+this.value)">${CN.map((n,k)=>`<option value="${k}" ${sel.c===k?'selected':''}>C${k+1} ${n}</option>`).join("")}</select></div>`}
+  if(sel.type==="wire")h+=`<div class="row">Circuit <select onchange="upd('c',+this.value)">${CN.map((n,k)=>`<option value="${k}" ${wcOf(sel)===k?'selected':''}>C${k+1} ${n}</option>`).join("")}</select></div><div class="row">Length ${wlen(sel).toFixed(2)} m</div><div class="row"><button class="btn" onclick="resetRoute()">Reset route</button></div><div class="hint">Drag the round handles: an end to reconnect it to another symbol, the middle to move the bend.</div>`;
+  h+=`<div class="row">${sel.type==="door"||sel.type==="window"?'<div class="row">Width (m) <input type="number" step="0.1" min="0.3" max="4" value="'+(sel.len||(sel.type==="door"?0.9:1.2))+'" onchange="upd(\'len\',+this.value||0.9)"></div><button class="btn" onclick="rot()">Rotate / flip swing</button>':''}<button class="btn" onclick="del()">Delete</button></div>`}
+ h+=`<h3>Active circuit for new wires and devices</h3><div class="row"><select id="ac" onchange="S.circ=+this.value;render()"><option value="-1" ${S.circ<0?'selected':''}>Auto (by appliance type)</option>${CN.map((n,k)=>`<option value="${k}" ${S.circ===k?'selected':''}>C${k+1} ${n}</option>`).join("")}</select>${S.circ>=0?`<span class="sw" style="background:${CC[S.circ]}"></span></div><div class="row">Rename circuit <input value="${esc(CN[S.circ])}" onchange="CN[S.circ]=this.value||CN[S.circ];render()"></div>`:'</div>'}`;
+ if(BG)h+=`<h3>PDF underlay</h3><div class="row">Opacity <input type="range" min="10" max="100" value="${Math.round(BG.op*100)}" oninput="BG.op=this.value/100;render(1)" onchange="bgSave()"></div><div class="row"><button class="btn" onclick="S.tool='calib';tools();render()">Set scale</button><button class="btn" onclick="pdfDetect()">Detect walls, doors, windows</button><button class="btn" onclick="pdfToWalls()">Fallback: every line to a wall</button>${BG?'<button class="btn" onclick="printPart(\'pdf\')">Print imported PDF</button>':''}<button class="btn" onclick="detachPdf()">Remove from plan</button></div><div class="hint">The PDF stays exactly as imported under your drawing. Set scale: click two points a known distance apart, then type the real distance.</div>`;h+=`<h3>Settings</h3><div class="row"><label><input type="checkbox" ${S.rd!==false?'checked':''} onchange="S.rd=this.checked;render()"> Show room dimensions</label></div><div class="row">Room size measured <select onchange="S.rdm=this.value;render()"><option value="i" ${S.rdm==="c"?'':'selected'}>Inside faces (clear)</option><option value="c" ${S.rdm==="c"?'selected':''}>Centre lines</option></select></div><div class="row"><label><input type="checkbox" ${S.ng?'':'checked'} onchange="S.ng=!this.checked;render()"> Show grid</label></div><div class="row"><label><input type="checkbox" ${S.ns?'':'checked'} onchange="S.ns=!this.checked"> Snap to grid</label></div><div class="row">Default wall thickness (mm) <input type="number" min="50" max="600" step="10" value="${S.wt||200}" onchange="S.wt=+this.value||200;render()"></div><div class="row">Wall line ${woSel()}</div><div class="row">Wall fill <select onchange="S.wf=this.value;render()">${[["purple","Light purple"],["hatch","Hatch"],["solid","Solid"],["empty","Empty"]].map(x=>`<option value="${x[0]}" ${(S.wf||"purple")===x[0]?'selected':''}>${x[1]}</option>`).join("")}</select></div>${mnUI()}${gmUI()}<div class="row"><button class="btn" onclick="autoC()">Assign circuits by appliance type</button></div><div class="row">Voltage (V) <input type="number" value="${S.volt}" onchange="S.volt=+this.value||240;render()"></div><div class="row">Installation method <select onchange="S.im=this.value;render()">${[["A","A: conduit in insulated wall"],["B","B: conduit on or in wall"],["C","C: clipped direct"]].map(x=>`<option value="${x[0]}" ${(S.im||"B")===x[0]?'selected':''}>${x[1]}</option>`).join("")}</select></div><div class="row">Ambient (°C) <select onchange="S.ta=+this.value;render()">${[25,30,35,40,45,50].map(t=>`<option ${(S.ta||30)===t?'selected':''}>${t}</option>`).join("")}</select> Circuits grouped <input type="number" min="1" max="9" value="${S.cg||1}" onchange="S.cg=+this.value||1;render()"></div><div class="row">Demand factor <input type="number" step="0.05" min="0.1" max="1" value="${S.df}" onchange="S.df=+this.value||1;render()"></div><div class="row">Extra cable per run (m) <input type="number" step="0.5" min="0" value="${S.extra}" onchange="S.extra=+this.value||0;render()"></div>`;
+ h+='<div class="sec" data-s="circuits"><h3>Circuits and power</h3><table><tr><th>Circuit</th><th class="n">Pts</th><th class="n">W</th><th class="n">A</th><th class="n">MCB</th><th class="n">mm²</th><th class="n">Iz</th><th class="n">Vd</th><th class="n">Cable</th></tr>';
+ let tw=0;st.cl.forEach((c,k)=>{if(!c.n&&!c.len)return;tw+=c.w;const a=c.w/S.volt,b=c.In;h+=`<tr><td><span class="sw" style="background:${CC[k]}"></span>C${k+1} ${CN[k]}</td><td class="n">${c.n}</td><td class="n">${c.w}</td><td class="n">${c.Ib.toFixed(1)}</td><td class="n">${coSel(k,'mcb',[6,10,16,20,25,32,40,50,63],c.ov.mcb,c.aIn,"A")} ${c.crv}</td><td class="n">${coSel(k,'mm',[1.5,2.5,4,6,10,16,25,35],c.ov.mm,c.aCab.mm,"")}</td><td class="n">${c.cab.iz.toFixed(0)}</td><td class="n" style="color:${c.cab.ok?'inherit':'#c0392b'}">${c.cab.vd.toFixed(1)}%</td><td class="n">${c.len.toFixed(1)} m</td></tr>`});
+ h+='</table>';
+ const dm=tw*S.df,ta=st.cl.reduce((s,c)=>s+c.va,0)*S.df/S.volt;
+ h+=`<div class="row" style="margin-top:8px">Connected load<span class="big">${(tw/1000).toFixed(2)} kW</span></div><div class="row">Maximum demand (x${S.df})<b>${(dm/1000).toFixed(2)} kW</b> · ${ta.toFixed(1)} A · main breaker ${mainBr(ta)} A</div><div class="hint">Kenya: 240 V single phase, 50 Hz. Cables are sized to BS 7671 (copper PVC, tables 4D1A and 4D1B) from design current, breaker rating, ambient temperature, grouping and voltage drop. MCB type C for motor loads. Fit 30 mA RCD protection on socket and wet-area circuits. Verify with an EPRA-licensed electrician.</div>`;
+ h+='</div><div class="sec" data-s="cable"><h3>Cable sizing per appliance</h3><table><tr><th>Item</th><th class="n">W</th><th class="n">A</th><th class="n">MCB</th><th class="n">mm²</th><th class="n">Run m</th><th class="n">Vd</th></tr>';
+ let nd=0;for(const i of S.items){if(!isDev(i)||D[i.type].g==="dist"||D[i.type].g==="sw")continue;nd++;const Ib=(i.watts||0)/(S.volt*pfOf(i.type)),In=Math.max(brk(Ib),gmOf(i.type)||6),d=st.dm[i.id],lm=isLight(i.type)?3:5,ovm=((S.co&&S.co[i.c||0])||{}).mm,r=ovm?cabFix(In,Ib,d||0,lm,ovm):cabFor(In,Ib,d||0,lm,mnf(i.type));h+=`<tr><td><span class="sw" style="background:${CC[i.c||0]}"></span>${esc(i.tag||D[i.type].n)}</td><td class="n">${i.watts||0}</td><td class="n">${Ib.toFixed(1)}</td><td class="n">${In}A</td><td class="n">${r.mm}</td><td class="n">${d===undefined?'-':d.toFixed(1)}</td><td class="n" style="color:${d===undefined||r.ok?'inherit':'#c0392b'}">${d===undefined?'-':r.vd.toFixed(1)+'%'}</td></tr>`}
+ if(!nd)h+='<tr><td colspan="7" class="hint">Add appliances to see their cable sizes.</td></tr>';
+ h+='</table><div class="hint">Each appliance gets its own breaker and the smallest copper cable that carries it and keeps voltage drop (Vd) within 3% for lights and fans, 5% for other loads. Sockets are sized for a 20 A radial circuit (BS 7671). Minimum cable size for each appliance type is set under Settings. Run and Vd show once the appliance is wired back to a distribution board. Values are approximate (twin and earth in conduit, about 30 C); confirm with a licensed electrician and local code.</div>';
+ h+='</div><div class="sec" data-s="materials"><h3>Material list</h3>'+matHtml(st,ta);const h0=h;h='';h+='<table><tr><th>Item</th><th class="n">Qty</th></tr>';
+ for(const k in D){if(st.cnt[k])h+=`<tr><td>${D[k].n}</td><td class="n">${st.cnt[k]}</td></tr>`}
+ const tl=st.cl.reduce((s,c)=>s+c.len,0);
+ st.cl.forEach((c,k)=>{if(c.len)h+=`<tr><td><span class="sw" style="background:${CC[k]}"></span>Cable C${k+1} (${c.cab.mm} mm²)</td><td class="n">${c.len.toFixed(1)} m</td></tr>`});
+ const act=st.cl.filter(c=>c.n||c.len).length;
+ h+=`<tr><td>Cable total (+10% waste)</td><td class="n">${(tl*1.1).toFixed(1)} m</td></tr><tr><td>Conduit (est.)</td><td class="n">${(tl*0.5*1.1).toFixed(1)} m</td></tr><tr><td>Circuit breakers (+1 main)</td><td class="n">${act+(act?1:0)}</td></tr><tr><td>Junction boxes (est.)</td><td class="n">${Math.ceil((st.cnt.light||0)/2+(st.cnt.socket||0)*0)}</td></tr><tr><td>Wire runs drawn</td><td class="n">${st.wires}</td></tr>`;
+ h+=`<tr><td>Rooms / floor area</td><td class="n">${st.rooms} / ${st.area.toFixed(1)} m²</td></tr><tr><td>Wall length</td><td class="n">${st.walls.toFixed(1)} m</td></tr><tr><td>Wall footprint (length x thickness)</td><td class="n">${st.wa.toFixed(2)} m²</td></tr><tr><td>Doors / windows</td><td class="n">${st.doors} / ${st.wins}</td></tr></table>`;
+ h=h0;h+=costHtml(st,ta);h+='</div><div class="sec" data-s="legend"><h3>Symbol legend</h3><div class="row">'+Object.keys(D).map(t=>`<span class="lgi${st.cnt[t]?' used':''}" style="display:inline-flex;align-items:center;gap:4px;width:150px"><svg width="40" height="34" viewBox="-20 -17 40 34">${symK(t,'var(--ink)')}</svg>${D[t].n}</span>`).join("")+'</div><div class="hint">Dashed coloured line = cable, the colour shows the circuit. Red line with ticks = dimension.</div>';
+ h+='</div>';$("side").innerHTML=h}
+
+function upd(k,v,nr){const s=get(S.sel);if(!s)return;snap();s[k]=v;if(k==="c"){if(s.type==="wire")[get(s.a),get(s.b)].forEach(d=>{if(d&&d.type!=="db")d.c=v});else if(isDev(s))S.items.forEach(w=>{if(w.type==="wire"&&(w.a===s.id||w.b===s.id))w.c=v})}if(nr){render(1);return}render()}
+function del(){if(!S.sel)return;snap();S.items=S.items.filter(i=>i.id!==S.sel&&i.a!==S.sel&&i.b!==S.sel);S.sel=null;render()}
+function rot(){const s=get(S.sel);if(s){snap();if(isDev(s)){s.ang=((s.ang||0)+90)%360;render();return}{const r0=s.rot||0;if(s.type==="door"||s.type==="window")s.rot=snapWall({...s})?(r0+2)%4:(r0+1)%4;else s.rot=(r0+1)%4};render()}}
+const HINT={parea:"Drag a rectangle around the area to print.",edoor:"Click on a wall to place an empty door opening (just a gap).",ewin:"Click on a wall to place an empty window opening (just the frame outline).",calib:"Click two points a known distance apart on the imported PDF, then type the real distance in metres.",dim:"Drag along a wall or room to add a dimension line with its length.",text:"Click to place a text label, then edit the text in the side panel.",select:"Click an item to select, drag devices to move. Delete key removes.",room:"Drag to draw a room. Each grid square is 0.25 m.",wall:"Click the plan to set the start point. Then click the end point, or type a direction and distance in the bar and press Enter. Click Done or press Esc to stop.",door:"Click to place a door.",window:"Click to place a window.",wire:"Click a device, then click the next device to run a cable in the active circuit. Start at the distribution board."};
+function tools(){let h="";for(const[t,l]of TOOLS.filter(x=>x[0]!=="Electrical")){h+=`<h4>${t}</h4>`;for(const[k,n]of l)h+=`<button class="tb ${(k==="dwall"?(S.tool==="wall"&&S.wd&&!S.bm):k==="beam"?(S.tool==="wall"&&S.bm):k==="wall"?(S.tool==="wall"&&!S.wd&&!S.bm):S.tool===k)?'on':''}" data-t="${k}">${n}</button>`}
+ h+=elecTools();$("tools").innerHTML=h;$("hint").textContent=HINT[S.tool]||"Click on the plan to place a "+D[S.tool].n.toLowerCase()+". Default "+D[S.tool].w+" W."}
+$("tools").onclick=e=>{const b=e.target.closest("[data-t]");if(!b)return;setTool(b.dataset.t);return;wfrom=null;tmp=null;ws=null;wp=null;cal=null;wbarShow();tools();render()};
+$("zi").onclick=()=>zoom(0.8);$("zo").onclick=()=>zoom(1.25);$("zf").onclick=()=>{V={x:0,y:0,w:1000,h:680};setV()};
+svg.addEventListener("wheel",e=>{e.preventDefault();const p=pt(e);zoom(e.deltaY<0?0.85:1.18,p.x,p.y)},{passive:false});
+$("pdf").onchange=function(){const part=this.value;this.value="";if(part)printPart(part)};
+addEventListener("afterprint",()=>{const pg=$("pdfpg");if(pg)pg.remove();if(BG&&BG._op){BG.op=BG._op;BG._op=0}delete document.body.dataset.print;delete document.body.dataset.pdf;if(sV){V=sV;sV=null}setV()});
+$("bk").onclick=()=>{if(!gate("Open project (restore)"))return;const cur=JSON.stringify(S.items),r=prompt("Copy this text and keep it in a file to back up your plan. To restore a plan, replace the text with a saved backup and press OK.",cur);if(r&&r!==cur){try{const a=JSON.parse(r);if(!Array.isArray(a))throw 0;snap();S.items=a;S.nid=Math.max(0,...a.map(i=>i.id||0))+1;S.sel=null;render()}catch(e){alert("That text is not a valid backup.")}}};
+$("undo").onclick=()=>{const h=S.hist.pop();if(h){S.items=JSON.parse(h);S.sel=null;render()}};
+$("clear").onclick=()=>{if(S.items.length&&confirm("Remove everything from the plan?")){snap();S.items=[];S.sel=null;render()}};
+addEventListener("keydown",e=>{if(e.key==="Escape"){ws=null;wp=null;WL=null;tmp=null;wfrom=null;cal=null;SNP=null;PA=null;pbarShow();S.tool="select";wbarShow();tools();render();return}
+ if(!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)&&!e.ctrlKey&&!e.metaKey&&!e.altKey){const m={w:"wall",d:"door",n:"window",b:"beam",s:"select"}[e.key.toLowerCase()];if(m){setTool(m);return}}if((e.key==="r"||e.key==="R")&&!/INPUT|SELECT/.test(document.activeElement.tagName))rot();if((e.key==="Delete"||e.key==="Backspace")&&!/INPUT|SELECT/.test(document.activeElement.tagName)){del()}});
+
+svg.addEventListener("pointerdown",e=>{
+ const p=pt(e),el=e.target.closest("[data-id]"),id=el?+el.dataset.id:null,t=S.tool;
+ if(t==="select"){S.sel=id;if(!id)pan={sx:e.clientX,sy:e.clientY,vx:V.x,vy:V.y};const it=id&&get(id),hh=e.target.dataset&&e.target.dataset.h;if(it&&hh==="tag"){snap();const rp=rawPt(e);drag={id,mode:"tag",px:rp.x,py:rp.y,tx:it.tdx||0,ty:it.tdy||0}}else if(it&&hh==="sz"){snap();drag={id,mode:"sz"}}else if(it&&it.type==="wire"&&(hh==="wa"||hh==="wb"||hh==="wm")){snap();drag={id,mode:hh}}else if(it&&it.type!=="wire"&&it.type!=="wall"&&it.type!=="room"&&it.type!=="dim"){snap();drag={id,dx:p.x-it.x,dy:p.y-it.y}}else if(it&&(it.type==="dim"||((it.type==="wall"||it.type==="beam")&&e.target.dataset.h))){snap();drag={id,mode:e.target.dataset.h||"m",px:p.x,py:p.y,o:{x:it.x,y:it.y,x2:it.x2,y2:it.y2},ax:it.type!=="dim"}}svg.setPointerCapture(e.pointerId);render()}
+ else if(t==="wall"){SHIFT=e.shiftKey;wallClick(snapPt(p)||p)}
+ else if(t==="room"||t==="dim"){const q0=snapPt(p)||p;tmp={x:q0.x,y:q0.y,x2:q0.x,y2:q0.y};svg.setPointerCapture(e.pointerId)}
+ else if(t==="wire"){const it=id&&get(id);if(it&&isDev(it)){if(!wfrom)wfrom=id;else if(wfrom!==id){snap();const a=get(wfrom);const cc=S.circ>=0?S.circ:wireC(a,it);add({type:"wire",a:wfrom,b:id,c:cc});if(S.circ>=0)[a,it].forEach(d=>{if(d.type!=="db")d.c=S.circ});wfrom=id}render()}}
+ else if(D[t]){snap();const o=add({type:t,x:p.x,y:p.y,watts:D[t].w,c:cOf(t),tag:D[t].s+(S.items.filter(q=>q.type===t).length+1)});S.sel=o.id;render()}
+ else if(t==="parea"){if(PA){PA.a=p;PA.b=p;PA.drag=1;svg.setPointerCapture(e.pointerId)}}
+ else if(t==="calib"){const rp=rawPt(e);calClick(snapPt(rp)||rp)}
+ else if(t==="text"){snap();const o=add({type:"text",x:p.x,y:p.y,text:"Label"});S.sel=o.id;render()}
+ else if(t==="edoor"||t==="ewin"){snap();const o=add({type:t==="edoor"?"door":"window",x:p.x,y:p.y,rot:0,dt:"empty"});snapWall(o);S.sel=o.id;render()}
+ else if(t==="door"||t==="window"){snap();const o=add({type:t,x:p.x,y:p.y,rot:0});snapWall(o);S.sel=o.id;render()}});
+svg.addEventListener("pointermove",e=>{if(pan){const k=V.w/svg.getBoundingClientRect().width;V.x=pan.vx-(e.clientX-pan.sx)*k;V.y=pan.vy-(e.clientY-pan.sy)*k;setV();return}const p=pt(e);SHIFT=e.shiftKey;LP=rawPt(e);setSnap(S.tool==="calib"?LP:p);if(PA&&PA.drag){PA.b=p;render(1);return}if(ws&&S.tool==="wall"){wmove(SNP||p);return}
+ if(drag){const it=get(drag.id),rp=rawPt(e);if(drag.mode==="tag"){it.tdx=drag.tx+(rp.x-drag.px);it.tdy=drag.ty+(rp.y-drag.py)}else if(drag.mode==="sz"){it.sc=Math.max(0.3,Math.min(8,Math.hypot(rp.x-it.x,rp.y-it.y)/24))}else if(drag.mode==="wm"){wireMid(it,p)}else if(drag.mode==="wa"||drag.mode==="wb"){WDRAG={id:it.id,end:drag.mode,p}}else if(drag.o){const ox=p.x-drag.px,oy=p.y-drag.py,o=drag.o;if(drag.mode==="m"){it.x=o.x+ox;it.y=o.y+oy;it.x2=o.x2+ox;it.y2=o.y2+oy}else if(drag.mode==="1"){const d=axp(o,ox,oy,drag.ax);it.x=o.x+d[0];it.y=o.y+d[1]}else{const d=axp(o,ox,oy,drag.ax);it.x2=o.x2+d[0];it.y2=o.y2+d[1]}}else{it.x=sn(p.x-drag.dx);it.y=sn(p.y-drag.dy);if(it.type==="door"||it.type==="window")snapWall(it)}render()}
+ else if(tmp){tmp.x2=p.x;tmp.y2=p.y;if(S.tool==="wall"||S.tool==="dim"){if(Math.abs(tmp.x2-tmp.x)>Math.abs(tmp.y2-tmp.y)&&e.shiftKey!==false)tmp.y2=tmp.y;else if(e.shiftKey!==false)tmp.x2=tmp.x}render()}});
+svg.addEventListener("pointerup",()=>{if(PA&&PA.drag){PA.drag=0;return}if(pan){pan=null;return}
+ if(drag){if(WDRAG)applyWDrag();drag=null;WDRAG=null;render();return}
+ if(tmp){const a=tmp;tmp=null;if(a.x!==a.x2||a.y!==a.y2){snap();
+  if(S.tool==="room"){if(a.x!==a.x2&&a.y!==a.y2){const r=add({type:"room",x:Math.min(a.x,a.x2),y:Math.min(a.y,a.y2),w:Math.abs(a.x2-a.x),h:Math.abs(a.y2-a.y),name:"Room "+(S.items.filter(i=>i.type==="room").length+1),ds:S.wd?1:0});S.sel=r.id}}
+  else{const w=add({type:S.tool==="dim"?"dim":"wall",x:a.x,y:a.y,x2:a.x2,y2:a.y2});S.sel=w.id}}render()}});
+if(!S.mig){S.mig=1;if(S.items.length)autoC()}mergeCS(S.cs);delete S.cs;regCS();tools();render();restoreBG();refreshLib();
+</script></body></html>
